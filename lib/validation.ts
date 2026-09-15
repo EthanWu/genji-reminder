@@ -1,0 +1,3 @@
+import {z} from 'zod';
+const str=z.string().max(20000).default('');
+export const recordSchema=z.object({id:z.string().min(1).max(100),kind:z.enum(['resource','task']),name:z.string().trim().min(1).max(300),type:str,business:str,priority:z.enum(['P0','P1','P2','P3']).default('P2'),contact:str,city:str,channel:str,opportunity:str,owner:z.enum(['我','老板']).default('我'),status:str,planned:z.string().refine(s=>!s||/^\d{4}-\d{2}-\d{2}$/.test(s)).default(''),deadline:z.string().refine(s=>!s||/^\d{4}-\d{2}-\d{2}$/.test(s)).default(''),resourceId:str,source:str,verified:z.boolean().default(false),notes:z.array(z.object({text:z.string().max(20000),at:z.string().datetime(),by:z.string().max(100)})).max(1000).default([]),revision:z.number().int().min(0)});

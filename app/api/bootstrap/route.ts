@@ -1,0 +1,3 @@
+import { db } from '@/db/raw';
+import { seeds } from '@/lib/seeds';
+export async function POST(req:Request){const u=new URL(req.url);if(!['localhost','127.0.0.1'].includes(u.hostname)&&(!req.headers.get('oai-authenticated-user-id')||req.headers.get('origin')!==u.origin))return Response.json({error:'请登录后操作'},{status:401});try{const count=await db().prepare('SELECT count(*) AS n FROM records').first<{n:number}>();if(!count?.n){await db().batch(seeds.map(s=>db().prepare('INSERT OR IGNORE INTO records(id,kind,name,data,revision,updated_at) VALUES(?,?,?,?,1,?)').bind(s.id,s.kind,s.name,JSON.stringify(s),new Date().toISOString())))}return Response.json({ok:true})}catch{return Response.json({error:'历史资源初始化失败，请重试'},{status:503})}}
