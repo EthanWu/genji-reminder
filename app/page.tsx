@@ -173,6 +173,7 @@ export default function Home() {
     time: item.time || "",
     category: item.category || "其他事项",
     attendees: item.attendees || "",
+    topic: item.topic || "",
   });
   async function refresh() {
     setLoading(true);
@@ -450,6 +451,7 @@ export default function Home() {
                   {t.category || "其他事项"}
                   {t.time && ` · ${t.time}`}
                   {t.attendees && ` · 参会人：${t.attendees}`}
+                  {t.topic && ` · 议题：${t.topic}`}
                   {t.deadline && (
                     <span className={t.deadline < day ? "late" : ""}>
                       {" "}
@@ -1687,31 +1689,26 @@ export default function Home() {
                         ))}
                       </NativeSelect>
                     </label>
-                    {(edit.category === "会议" ||
-                      edit.category === "电话会") && (
-                      <>
-                        <label className="wide">
-                          会议议题
-                          <Textarea
-                            placeholder="填写本次会议或电话会要讨论的议题"
-                            value={edit.opportunity}
-                            onChange={(e) =>
-                              setEdit({ ...edit, opportunity: e.target.value })
-                            }
-                          />
-                        </label>
-                        <label className="wide">
-                          参会人员（单独字段）
-                          <Textarea
-                            placeholder="例如：Genji、珈珈、张三（品牌方）"
-                            value={edit.attendees}
-                            onChange={(e) =>
-                              setEdit({ ...edit, attendees: e.target.value })
-                            }
-                          />
-                        </label>
-                      </>
-                    )}
+                    <label className="wide">
+                      会议议题（可留空）
+                      <Input
+                        placeholder="例如：品牌合作方案、预算与下一步"
+                        value={edit.topic}
+                        onChange={(e) =>
+                          setEdit({ ...edit, topic: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="wide">
+                      参会人员（可留空，单独字段）
+                      <Textarea
+                        placeholder="例如：Genji、珈珈、张三（品牌方）"
+                        value={edit.attendees}
+                        onChange={(e) =>
+                          setEdit({ ...edit, attendees: e.target.value })
+                        }
+                      />
+                    </label>
                   </>
                 )}
                 <label className="wide">
@@ -1792,13 +1789,10 @@ export default function Home() {
                   {detail.planned || "未排期"} {detail.time || "（无具体时间）"}{" "}
                   / {detail.deadline || "无硬截止"}
                 </dd>
-                {(detail.category === "会议" ||
-                  detail.category === "电话会") && (
-                  <>
-                    <dt>议题与参会人员</dt>
-                    <dd className="prewrap">{detail.attendees || "待补充"}</dd>
-                  </>
-                )}
+                <dt>会议议题</dt>
+                <dd className="prewrap">{detail.topic || "待补充"}</dd>
+                <dt>参会人员</dt>
+                <dd className="prewrap">{detail.attendees || "待补充"}</dd>
                 <dt>关联资源</dt>
                 <dd>
                   {resources.find((r) => r.id === detail.resourceId)?.name ||

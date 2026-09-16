@@ -23,6 +23,7 @@ export const recordSchema = z.object({
     .default(""),
   category: z.string().max(100).default("其他事项"),
   attendees: str,
+  topic: str,
   deadline: z
     .string()
     .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s))

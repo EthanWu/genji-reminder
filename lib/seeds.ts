@@ -109,6 +109,7 @@ export const seeds: RecordItem[] = entries.map((x, i) => ({
   time: "",
   category: "其他事项",
   attendees: "",
+  topic: "",
   deadline: "",
   resourceId: "",
   source,
