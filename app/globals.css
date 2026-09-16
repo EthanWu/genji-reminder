@@ -482,6 +482,19 @@ h1 {
 .taskname small {
   margin-top: 5px;
 }
+.taskmeta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  color: #6f8790;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.taskmeta b {
+  color: #385762;
+  font-weight: 600;
+}
 .completed strong {
   text-decoration: line-through;
   color: #8e9da1;

@@ -446,22 +446,31 @@ export default function Home() {
                 }}
               >
                 <strong>{t.name}</strong>
-                <small>
-                  {t.owner === "老板" ? "Genji" : "珈珈"} ·{" "}
-                  {t.category || "其他事项"}
-                  {t.time && ` · ${t.time}`}
-                  {t.attendees && ` · 参会人：${t.attendees}`}
-                  {t.topic && ` · 议题：${t.topic}`}
-                  {t.deadline && (
-                    <span className={t.deadline < day ? "late" : ""}>
-                      {" "}
-                      · 截止 {t.deadline}
+                <div className="taskmeta">
+                  <span>
+                    {t.owner === "老板" ? "Genji" : "珈珈"} ·{" "}
+                    {t.category || "其他事项"}
+                    {t.time && ` · ${t.time}`}
+                  </span>
+                  {t.topic && (
+                    <span>
+                      <b>议题</b>：{t.topic}
                     </span>
                   )}
-                  {t.planned && t.planned < day && t.status !== "已完成"
-                    ? " · 已顺延至今天"
-                    : ""}
-                </small>
+                  {t.attendees && (
+                    <span>
+                      <b>参会人员</b>：{t.attendees}
+                    </span>
+                  )}
+                  {t.deadline && (
+                    <span className={t.deadline < day ? "late" : ""}>
+                      截止 {t.deadline}
+                    </span>
+                  )}
+                  {t.planned && t.planned < day && t.status !== "已完成" && (
+                    <span className="late">已顺延至今天</span>
+                  )}
+                </div>
               </button>
               <Priority p={t.priority} />
             </div>
