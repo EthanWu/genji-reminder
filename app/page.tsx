@@ -169,6 +169,9 @@ export default function Home() {
     ...item,
     notes: item.notes || [],
     links: item.links || [],
+    time: item.time || "",
+    category: item.category || "其他事项",
+    attendees: item.attendees || "",
   });
   async function refresh() {
     setLoading(true);
@@ -198,7 +201,7 @@ export default function Home() {
   const resources = items.filter((i) => i.kind === "resource"),
     tasks = items.filter((i) => i.kind === "task");
   const effective = (t: RecordItem) =>
-    t.status !== "已完成" && t.planned && t.planned < day ? day : t.planned;
+    t.status !== "已完成" && (!t.planned || t.planned < day) ? day : t.planned;
   const activeTasks = tasks.filter((t) => t.status !== "已完成");
   const due = activeTasks.filter(
     (t) => effective(t) === day || (t.deadline && t.deadline <= day),
@@ -412,43 +415,53 @@ export default function Home() {
   const taskRows = (list: RecordItem[]) =>
     list.length ? (
       <div className="tasklist">
-        {list.map((t) => (
-          <div
-            className={"taskrow " + (t.status === "已完成" ? "completed" : "")}
-            key={t.id}
-          >
-            <Checkbox
-              aria-label={"完成 " + t.name}
-              checked={t.status === "已完成"}
-              disabled={busy}
-              onCheckedChange={(c) =>
-                save({ ...t, status: c ? "已完成" : "待处理" }, false)
+        {[...list]
+          .sort(
+            (a, b) =>
+              (a.time ? 0 : 1) - (b.time ? 0 : 1) ||
+              a.time.localeCompare(b.time),
+          )
+          .map((t) => (
+            <div
+              className={
+                "taskrow " + (t.status === "已完成" ? "completed" : "")
               }
-            />
-            <button
-              className="taskname"
-              onClick={() => {
-                setDetail(t);
-                setNote("");
-              }}
+              key={t.id}
             >
-              <strong>{t.name}</strong>
-              <small>
-                {t.owner} · {t.business}
-                {t.deadline && (
-                  <span className={t.deadline < day ? "late" : ""}>
-                    {" "}
-                    · 截止 {t.deadline}
-                  </span>
-                )}
-                {t.planned && t.planned < day && t.status !== "已完成"
-                  ? " · 已顺延至今天"
-                  : ""}
-              </small>
-            </button>
-            <Priority p={t.priority} />
-          </div>
-        ))}
+              <Checkbox
+                aria-label={"完成 " + t.name}
+                checked={t.status === "已完成"}
+                disabled={busy}
+                onCheckedChange={(c) =>
+                  save({ ...t, status: c ? "已完成" : "待处理" }, false)
+                }
+              />
+              <button
+                className="taskname"
+                onClick={() => {
+                  setDetail(t);
+                  setNote("");
+                }}
+              >
+                <strong>{t.name}</strong>
+                <small>
+                  {t.owner === "老板" ? "Genji" : "珈珈"} ·{" "}
+                  {t.category || "其他事项"}
+                  {t.time && ` · ${t.time}`}
+                  {t.deadline && (
+                    <span className={t.deadline < day ? "late" : ""}>
+                      {" "}
+                      · 截止 {t.deadline}
+                    </span>
+                  )}
+                  {t.planned && t.planned < day && t.status !== "已完成"
+                    ? " · 已顺延至今天"
+                    : ""}
+                </small>
+              </button>
+              <Priority p={t.priority} />
+            </div>
+          ))}
       </div>
     ) : (
       <div className="empty">
@@ -1607,6 +1620,34 @@ export default function Home() {
                 {edit.kind === "task" && (
                   <>
                     <label>
+                      事项分类
+                      <NativeSelect
+                        value={edit.category}
+                        onChange={(e) =>
+                          setEdit({ ...edit, category: e.target.value })
+                        }
+                      >
+                        {(edit.owner === "老板"
+                          ? ["会议", "电话会", "其他事项"]
+                          : ["工作推进", "沟通联系", "行政事项", "其他事项"]
+                        ).map((v) => (
+                          <NativeSelectOption key={v} value={v}>
+                            {v}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    </label>
+                    <label>
+                      具体时间（可留空）
+                      <Input
+                        type="time"
+                        value={edit.time}
+                        onChange={(e) =>
+                          setEdit({ ...edit, time: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
                       计划处理日期
                       <Input
                         type="date"
@@ -1644,6 +1685,19 @@ export default function Home() {
                         ))}
                       </NativeSelect>
                     </label>
+                    {(edit.category === "会议" ||
+                      edit.category === "电话会") && (
+                      <label className="wide">
+                        议题与参会人员
+                        <Textarea
+                          placeholder="议题：…\n参会人员：…"
+                          value={edit.attendees}
+                          onChange={(e) =>
+                            setEdit({ ...edit, attendees: e.target.value })
+                          }
+                        />
+                      </label>
+                    )}
                   </>
                 )}
                 <label className="wide">
@@ -1702,9 +1756,14 @@ export default function Home() {
               <div className="detail-tags">
                 <Priority p={detail.priority} />
                 <Badge variant="secondary">
+                  {detail.owner === "老板" ? "Genji" : "珈珈"}
+                </Badge>
+                <Badge variant="secondary">
                   {detail.verified ? detail.status : "待核实"}
                 </Badge>
-                <Badge variant="secondary">{detail.business}</Badge>
+                <Badge variant="secondary">
+                  {detail.category || "其他事项"}
+                </Badge>
               </div>
               <div className="inline">
                 <Button variant="outline" onClick={() => setEdit(detail)}>
@@ -1716,8 +1775,16 @@ export default function Home() {
                 <dd>{detail.owner}</dd>
                 <dt>计划日期 / 截止日期</dt>
                 <dd>
-                  {detail.planned || "未排期"} / {detail.deadline || "无硬截止"}
+                  {detail.planned || "未排期"} {detail.time || "（无具体时间）"}{" "}
+                  / {detail.deadline || "无硬截止"}
                 </dd>
+                {(detail.category === "会议" ||
+                  detail.category === "电话会") && (
+                  <>
+                    <dt>议题与参会人员</dt>
+                    <dd className="prewrap">{detail.attendees || "待补充"}</dd>
+                  </>
+                )}
                 <dt>关联资源</dt>
                 <dd>
                   {resources.find((r) => r.id === detail.resourceId)?.name ||

@@ -19,6 +19,9 @@ export type RecordItem = {
   owner: string;
   status: string;
   planned: string;
+  time: string;
+  category: string;
+  attendees: string;
   deadline: string;
   resourceId: string;
   source: string;
@@ -67,6 +70,9 @@ export const fresh = (kind: "resource" | "task"): RecordItem => ({
   owner: "我",
   status: kind === "resource" ? "待联系" : "待处理",
   planned: "",
+  time: "",
+  category: kind === "resource" ? "其他事项" : "其他事项",
+  attendees: "",
   deadline: "",
   resourceId: "",
   source: "手动录入",
