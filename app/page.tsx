@@ -150,6 +150,7 @@ export default function Home() {
     [deleteItem, setDeleteItem] = useState<RecordItem | null>(null),
     [busy, setBusy] = useState(false),
     [note, setNote] = useState(""),
+    [followupText, setFollowupText] = useState(""),
     [linkTitle, setLinkTitle] = useState(""),
     [linkUrl, setLinkUrl] = useState(""),
     [linkKind, setLinkKind] = useState("会议纪要"),
@@ -448,6 +449,7 @@ export default function Home() {
                   {t.owner === "老板" ? "Genji" : "珈珈"} ·{" "}
                   {t.category || "其他事项"}
                   {t.time && ` · ${t.time}`}
+                  {t.attendees && ` · 参会人：${t.attendees}`}
                   {t.deadline && (
                     <span className={t.deadline < day ? "late" : ""}>
                       {" "}
@@ -1687,16 +1689,28 @@ export default function Home() {
                     </label>
                     {(edit.category === "会议" ||
                       edit.category === "电话会") && (
-                      <label className="wide">
-                        议题与参会人员
-                        <Textarea
-                          placeholder="议题：…\n参会人员：…"
-                          value={edit.attendees}
-                          onChange={(e) =>
-                            setEdit({ ...edit, attendees: e.target.value })
-                          }
-                        />
-                      </label>
+                      <>
+                        <label className="wide">
+                          会议议题
+                          <Textarea
+                            placeholder="填写本次会议或电话会要讨论的议题"
+                            value={edit.opportunity}
+                            onChange={(e) =>
+                              setEdit({ ...edit, opportunity: e.target.value })
+                            }
+                          />
+                        </label>
+                        <label className="wide">
+                          参会人员（单独字段）
+                          <Textarea
+                            placeholder="例如：Genji、珈珈、张三（品牌方）"
+                            value={edit.attendees}
+                            onChange={(e) =>
+                              setEdit({ ...edit, attendees: e.target.value })
+                            }
+                          />
+                        </label>
+                      </>
                     )}
                   </>
                 )}
@@ -1841,6 +1855,34 @@ export default function Home() {
                   <p className="muted">还没有跟进记录。</p>
                 )}
               </div>
+              <h3>后续事项</h3>
+              <Textarea
+                placeholder="用自然语言记下跟进后产生的新任务，例如：下周一把报价单发给品牌方"
+                value={followupText}
+                onChange={(e) => setFollowupText(e.target.value)}
+              />
+              <Button
+                disabled={busy || !followupText.trim()}
+                onClick={async () => {
+                  const next = normalize({
+                    ...fresh("task"),
+                    name: followupText.trim(),
+                    planned: day,
+                    owner: detail.owner,
+                    business: detail.business,
+                    priority: detail.priority,
+                    resourceId: detail.resourceId,
+                    source: `由待办“${detail.name}”跟进生成`,
+                    opportunity: `由“${detail.name}”跟进产生的后续事项`,
+                  });
+                  if (await save(next, false)) {
+                    setFollowupText("");
+                    notify("后续待办已创建并完成关联");
+                  }
+                }}
+              >
+                创建关联后续待办
+              </Button>
             </>
           )}
         </SheetContent>
