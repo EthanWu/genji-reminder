@@ -445,7 +445,10 @@ export default function Home() {
                   setNote("");
                 }}
               >
-                <strong>{t.name}</strong>
+                <strong>
+                  {t.time ? `${t.time} ` : "待定 "}
+                  {t.name}
+                </strong>
                 <div className="taskmeta">
                   <span>
                     {t.owner === "老板" ? "Genji" : "珈珈"} ·{" "}
@@ -1274,11 +1277,17 @@ export default function Home() {
                     },
                     (_, i) => {
                       const d = month + "-" + String(i + 1).padStart(2, "0"),
-                        ts = tasks.filter(
-                          (t) =>
-                            (owner === "全部" || t.owner === owner) &&
-                            (effective(t) === d || t.deadline === d),
-                        );
+                        ts = tasks
+                          .filter(
+                            (t) =>
+                              (owner === "全部" || t.owner === owner) &&
+                              (effective(t) === d || t.deadline === d),
+                          )
+                          .sort(
+                            (a, b) =>
+                              (a.time ? 0 : 1) - (b.time ? 0 : 1) ||
+                              a.time.localeCompare(b.time),
+                          );
                       return (
                         <button
                           className={
@@ -1295,7 +1304,7 @@ export default function Home() {
                               className={t.owner === "老板" ? "boss" : ""}
                               key={t.id}
                             >
-                              {t.owner === "老板" ? "老板 · " : ""}
+                              {t.time ? `${t.time} ` : "待定 "}
                               {t.name}
                             </span>
                           ))}
