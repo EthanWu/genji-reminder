@@ -1208,14 +1208,19 @@ export default function Home() {
               </div>
               {scheduleMode === "list" ? (
                 <div className="schedule-list">
-                  {scheduleGroups.map(([dateKey, group]) => (
+                  {scheduleGroups.map(([dateKey, group]) => {
+                    const visibleGroup = group
+                      .filter((s) => s.status !== "已完成")
+                      .sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
+                    if (!visibleGroup.length) return null;
+                    return (
                     <section className="schedule-day-group" key={dateKey}>
                       <div className="schedule-day-heading">
                         <span>{dateKey === "未安排日期" ? dateKey : `${dateKey.slice(5)} · ${new Date(`${dateKey}T12:00:00`).toLocaleDateString("zh-CN", { weekday: "long" })}`}</span>
-                        <b>{group.length} 项</b>
+                        <b>{visibleGroup.length} 项</b>
                       </div>
                       <div className="schedule-day-items">
-                        {[...group].filter((s) => s.status !== "已完成").sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99")).map((s) => (
+                        {visibleGroup.map((s) => (
                           <article
                             className="schedule-card"
                             key={s.id}
@@ -1256,7 +1261,8 @@ export default function Home() {
                         ))}
                       </div>
                     </section>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="calendar-layout">
