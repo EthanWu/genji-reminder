@@ -1242,35 +1242,128 @@ export default function Home() {
                     ))}
                 </div>
               ) : (
-                <div className="calendar-grid">
-                  {Array.from(
-                    {
-                      length: new Date(
-                        Number(month.slice(0, 4)),
-                        Number(month.slice(5)),
-                        0,
-                      ).getDate(),
-                    },
-                    (_, i) => {
-                      const d = month + "-" + String(i + 1).padStart(2, "0"),
-                        ss = schedules.filter((s) => s.planned === d);
-                      return (
-                        <button
-                          className="day"
-                          key={d}
-                          onClick={() => setDate(d)}
+                <div className="calendar-layout">
+                  <section className="panel">
+                    <div className="panel-head">
+                      <h2>{month.replace("-", " 年 ")} 月</h2>
+                      <div className="inline">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => moveMonth(-1)}
                         >
-                          <b>{i + 1}</b>
-                          {ss.slice(0, 3).map((s) => (
-                            <span key={s.id} className="boss">
-                              {s.time ? s.time + " " : "待定 "}
-                              {s.name}
-                            </span>
-                          ))}
-                        </button>
-                      );
-                    },
-                  )}
+                          <ChevronLeft />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setMonth(day.slice(0, 7));
+                            setDate(day);
+                          }}
+                        >
+                          今天
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => moveMonth(1)}
+                        >
+                          <ChevronRight />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="calendar-grid">
+                      {["一", "二", "三", "四", "五", "六", "日"].map((d) => (
+                        <div className="weekday" key={d}>
+                          {d}
+                        </div>
+                      ))}
+                      {Array.from(
+                        {
+                          length:
+                            (new Date(month + "-01T12:00:00").getDay() + 6) % 7,
+                        },
+                        (_, i) => (
+                          <div key={"blank-s" + i} />
+                        ),
+                      )}
+                      {Array.from(
+                        {
+                          length: new Date(
+                            Number(month.slice(0, 4)),
+                            Number(month.slice(5)),
+                            0,
+                          ).getDate(),
+                        },
+                        (_, i) => {
+                          const d =
+                              month + "-" + String(i + 1).padStart(2, "0"),
+                            ss = schedules.filter((s) => s.planned === d);
+                          return (
+                            <button
+                              className={
+                                "day " +
+                                (d === date ? "selected " : "") +
+                                (d === day ? "today" : "")
+                              }
+                              key={d}
+                              onClick={() => setDate(d)}
+                            >
+                              <b>{i + 1}</b>
+                              {ss.slice(0, 3).map((s) => (
+                                <span key={s.id} className="boss">
+                                  {s.time ? s.time + " " : "待定 "}
+                                  {s.name}
+                                </span>
+                              ))}
+                            </button>
+                          );
+                        },
+                      )}
+                    </div>
+                  </section>
+                  <section className="panel">
+                    <div className="panel-head">
+                      <h2>{date.slice(5).replace("-", " 月 ")} 日</h2>
+                      <Button
+                        size="icon"
+                        onClick={() =>
+                          setEdit({ ...fresh("schedule"), planned: date })
+                        }
+                      >
+                        <Plus />
+                      </Button>
+                    </div>
+                    {schedules
+                      .filter((s) => s.planned === date)
+                      .sort((a, b) => a.time.localeCompare(b.time))
+                      .map((s) => (
+                        <article
+                          className="schedule-card"
+                          key={s.id}
+                          onClick={() => setEdit(s)}
+                        >
+                          <div className="schedule-time">
+                            {s.time || "未定时间"} · {s.name}
+                          </div>
+                          <div className="schedule-meta">
+                            {s.category} · {s.city || "地点待补充"}
+                          </div>
+                          {s.topic && (
+                            <p>
+                              <b>议题/主题：</b>
+                              {s.topic}
+                            </p>
+                          )}
+                          {s.attendees && (
+                            <p>
+                              <b>参会人员：</b>
+                              {s.attendees}
+                            </p>
+                          )}
+                        </article>
+                      ))}
+                  </section>
                 </div>
               )}
             </section>
