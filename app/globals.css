@@ -843,6 +843,20 @@ h1 {
   font-weight: 700;
   letter-spacing: 0.04em;
 }
+.schedule-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.schedule-completed {
+  color: #91a9aa;
+  text-decoration: line-through;
+}
+.calendar-completed {
+  color: #92a8aa !important;
+  text-decoration: line-through;
+  opacity: 0.72;
+}
 .schedule-meta {
   display: flex;
   align-items: center;

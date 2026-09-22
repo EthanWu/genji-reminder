@@ -83,7 +83,6 @@ const nav = [
   ["资源库", Layers3],
   ["待办事项", ListTodo],
   ["Genji日程", Clock3],
-  ["日历", CalendarDays],
   ["自然语言录入", Sparkles],
   ["设置与数据", Settings2],
 ] as const;
@@ -163,6 +162,7 @@ export default function Home() {
     [aiAnswer, setAiAnswer] = useState(""),
     [who, setWho] = useState("我");
   const [scheduleMode, setScheduleMode] = useState("list");
+  const [taskMode, setTaskMode] = useState("list");
   const day = today();
   function notify(s: string) {
     setToast(s);
@@ -1215,13 +1215,20 @@ export default function Home() {
                         <b>{group.length} 项</b>
                       </div>
                       <div className="schedule-day-items">
-                        {[...group].sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99")).map((s) => (
+                        {[...group].filter((s) => s.status !== "已完成").sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99")).map((s) => (
                           <article
                             className="schedule-card"
                             key={s.id}
                             onClick={() => setEdit(s)}
                           >
                             <div className="schedule-time">
+                              <Checkbox
+                                aria-label={`完成 ${s.name}`}
+                                checked={s.status === "已完成"}
+                                disabled={busy}
+                                onClick={(e) => e.stopPropagation()}
+                                onCheckedChange={(c) => save({ ...s, status: c ? "已完成" : "待确认" }, false)}
+                              />
                               {s.time || "未定时间"}
                             </div>
                             <h3>{s.name}</h3>
@@ -1321,7 +1328,7 @@ export default function Home() {
                             >
                               <b>{i + 1}</b>
                               {ss.slice(0, 3).map((s) => (
-                                <span key={s.id} className="boss">
+                                <span key={s.id} className={`boss ${s.status === "已完成" ? "calendar-completed" : ""}`}>
                                   {s.time ? s.time + " " : "待定 "}
                                   {s.name}
                                 </span>
@@ -1353,7 +1360,14 @@ export default function Home() {
                           key={s.id}
                           onClick={() => setEdit(s)}
                         >
-                          <div className="schedule-time">
+                          <div className={`schedule-time ${s.status === "已完成" ? "schedule-completed" : ""}`}>
+                            <Checkbox
+                              aria-label={`完成 ${s.name}`}
+                              checked={s.status === "已完成"}
+                              disabled={busy}
+                              onClick={(e) => e.stopPropagation()}
+                              onCheckedChange={(c) => save({ ...s, status: c ? "已完成" : "待确认" }, false)}
+                            />
                             {s.time || "未定时间"} · {s.name}
                           </div>
                           <div className="schedule-meta">
@@ -1382,6 +1396,14 @@ export default function Home() {
           {view === "待办事项" && (
             <section className="panel">
               <div className="filters">
+                <Tabs value={taskMode} onValueChange={setTaskMode}>
+                  <TabsList>
+                    <TabsTrigger value="list">列表视图</TabsTrigger>
+                    <TabsTrigger value="calendar">日历视图</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                {taskMode === "list" && (
+                <>
                 <Tabs value={owner} onValueChange={setOwner}>
                   <TabsList>
                     {["全部", "老板", "我", "乔伊"].map((o) => (
@@ -1403,8 +1425,11 @@ export default function Home() {
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </div>
+                </>
+                )}
               </div>
-              {["今日与逾期", "未来计划", "长期 / 未排期", "已完成"].map(
+              {taskMode === "list" && (
+              ["今日与逾期", "未来计划", "长期 / 未排期", "已完成"].map(
                 (group, i) => {
                   const list = tasks.filter(
                     (t) =>
@@ -1432,10 +1457,11 @@ export default function Home() {
                     </div>
                   );
                 },
+              )
               )}
             </section>
           )}
-          {view === "日历" && (
+          {view === "待办事项" && taskMode === "calendar" && (
             <div className="calendar-layout">
               <section className="panel">
                 <div className="panel-head">
