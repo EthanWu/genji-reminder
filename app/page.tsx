@@ -512,6 +512,19 @@ export default function Home() {
                 </div>
               </button>
               <Priority p={t.priority} />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="task-delete"
+                aria-label={`删除 ${t.name}`}
+                disabled={busy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteItem(t);
+                }}
+              >
+                <Trash2 size={16} />
+              </Button>
             </div>
           ))}
       </div>

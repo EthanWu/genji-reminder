@@ -482,6 +482,16 @@ h1 {
 .taskname small {
   margin-top: 5px;
 }
+.task-delete {
+  flex: 0 0 auto;
+  color: #9a7775;
+  opacity: 0.65;
+}
+.task-delete:hover {
+  color: #b34e4a;
+  background: #fff0ee;
+  opacity: 1;
+}
 .taskmeta {
   display: flex;
   flex-direction: column;
