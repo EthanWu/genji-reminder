@@ -1214,7 +1214,8 @@ export default function Home() {
                         </div>
                         <h3>{s.name}</h3>
                         <div className="schedule-meta">
-                          {s.category} · {s.city || "地点待补充"}
+                          <span className={`schedule-kind schedule-kind-${s.category}`}>{s.category}</span>
+                          <span className="schedule-location">{s.city || "地点待补充"}</span>
                         </div>
                         {s.topic && (
                           <p>
@@ -1347,7 +1348,8 @@ export default function Home() {
                             {s.time || "未定时间"} · {s.name}
                           </div>
                           <div className="schedule-meta">
-                            {s.category} · {s.city || "地点待补充"}
+                            <span className={`schedule-kind schedule-kind-${s.category}`}>{s.category}</span>
+                            <span className="schedule-location">{s.city || "地点待补充"}</span>
                           </div>
                           {s.topic && (
                             <p>
@@ -1790,6 +1792,18 @@ export default function Home() {
                         options={types}
                       />
                     </label>
+                    {edit.kind === "schedule" && (
+                      <label>
+                        地点（可留空）
+                        <Input
+                          placeholder="例如：腾讯会议 / 厦门海沧 / 厦门北站"
+                          value={edit.city}
+                          onChange={(e) =>
+                            setEdit({ ...edit, city: e.target.value })
+                          }
+                        />
+                      </label>
+                    )}
                     <label>
                       对接人
                       <Input
@@ -1886,6 +1900,18 @@ export default function Home() {
                         ))}
                       </NativeSelect>
                     </label>
+                    {edit.kind === "schedule" && (
+                      <label>
+                        地点（可留空）
+                        <Input
+                          placeholder="例如：腾讯会议 / 厦门海沧 / 厦门北站"
+                          value={edit.city}
+                          onChange={(e) =>
+                            setEdit({ ...edit, city: e.target.value })
+                          }
+                        />
+                      </label>
+                    )}
                     <label>
                       具体时间（可留空）
                       <Input
