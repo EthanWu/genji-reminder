@@ -775,6 +775,33 @@ h1 {
   gap: 16px;
   padding-top: 8px;
 }
+.schedule-day-group {
+  display: grid;
+  gap: 10px;
+}
+.schedule-day-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 15px;
+  border: 1px solid #d6e7e7;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eaf6f3, #f8fbfb);
+  color: #2c5d67;
+  font-size: 15px;
+  font-weight: 700;
+}
+.schedule-day-heading b {
+  color: #6d9294;
+  font-size: 12px;
+  font-weight: 600;
+}
+.schedule-day-items {
+  display: grid;
+  gap: 12px;
+  padding-left: 12px;
+  border-left: 2px solid #d7ebe7;
+}
 .schedule-card {
   position: relative;
   overflow: hidden;

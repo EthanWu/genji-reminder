@@ -205,6 +205,17 @@ export default function Home() {
   const resources = items.filter((i) => i.kind === "resource"),
     tasks = items.filter((i) => i.kind === "task"),
     schedules = items.filter((i) => i.kind === "schedule");
+  const scheduleGroups = Object.entries(
+    schedules.reduce<Record<string, RecordItem[]>>((groups, schedule) => {
+      const key = schedule.planned || "未安排日期";
+      (groups[key] ||= []).push(schedule);
+      return groups;
+    }, {}),
+  ).sort(([a], [b]) => {
+    if (a === "未安排日期") return 1;
+    if (b === "未安排日期") return -1;
+    return a.localeCompare(b);
+  });
   const effective = (t: RecordItem) =>
     t.status !== "已完成" && (!t.planned || t.planned < day) ? day : t.planned;
   const activeTasks = tasks.filter((t) => t.status !== "已完成");
@@ -1197,50 +1208,48 @@ export default function Home() {
               </div>
               {scheduleMode === "list" ? (
                 <div className="schedule-list">
-                  {[...schedules]
-                    .sort((a, b) =>
-                      `${a.planned} ${a.time}`.localeCompare(
-                        `${b.planned} ${b.time}`,
-                      ),
-                    )
-                    .map((s) => (
-                      <article
-                        className="schedule-card"
-                        key={s.id}
-                        onClick={() => setEdit(s)}
-                      >
-                        <div className="schedule-time">
-                          {s.planned || "未定日期"} {s.time || "未定时间"}
-                        </div>
-                        <h3>{s.name}</h3>
-                        <div className="schedule-meta">
-                          <span className={`schedule-kind schedule-kind-${s.category}`}>{s.category}</span>
-                          <span className="schedule-location">{s.city || "地点待补充"}</span>
-                        </div>
-                        {s.topic && (
-                          <p>
-                            <b>议题/主题：</b>
-                            {s.topic}
-                          </p>
-                        )}
-                        {s.attendees && (
-                          <p>
-                            <b>参会人员：</b>
-                            {s.attendees}
-                          </p>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteItem(s);
-                          }}
-                        >
-                          <Trash2 size={15} /> 删除
-                        </Button>
-                      </article>
-                    ))}
+                  {scheduleGroups.map(([dateKey, group]) => (
+                    <section className="schedule-day-group" key={dateKey}>
+                      <div className="schedule-day-heading">
+                        <span>{dateKey === "未安排日期" ? dateKey : `${dateKey.slice(5)} · ${new Date(`${dateKey}T12:00:00`).toLocaleDateString("zh-CN", { weekday: "long" })}`}</span>
+                        <b>{group.length} 项</b>
+                      </div>
+                      <div className="schedule-day-items">
+                        {[...group].sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99")).map((s) => (
+                          <article
+                            className="schedule-card"
+                            key={s.id}
+                            onClick={() => setEdit(s)}
+                          >
+                            <div className="schedule-time">
+                              {s.time || "未定时间"}
+                            </div>
+                            <h3>{s.name}</h3>
+                            <div className="schedule-meta">
+                              <span className={`schedule-kind schedule-kind-${s.category}`}>{s.category}</span>
+                              <span className="schedule-location">{s.city || "地点待补充"}</span>
+                            </div>
+                            {s.topic && (
+                              <p><b>议题/主题：</b>{s.topic}</p>
+                            )}
+                            {s.attendees && (
+                              <p><b>参会人员：</b>{s.attendees}</p>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteItem(s);
+                              }}
+                            >
+                              <Trash2 size={15} /> 删除
+                            </Button>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
                 </div>
               ) : (
                 <div className="calendar-layout">
