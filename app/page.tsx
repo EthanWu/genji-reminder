@@ -793,9 +793,9 @@ export default function Home() {
                       {["全部", "老板", "我", "乔伊"].map((o) => (
                         <TabsTrigger value={o} key={o}>
                           {o === "我"
-                            ? "我的待办"
+                            ? "珈珈待办"
                             : o === "老板"
-                              ? "老板待办"
+                              ? "Genji待办"
                               : o}
                         </TabsTrigger>
                       ))}
@@ -1428,9 +1428,9 @@ export default function Home() {
                     {["全部", "老板", "我", "乔伊"].map((o) => (
                       <TabsTrigger value={o} key={o}>
                         {o === "我"
-                          ? "我的待办"
+                          ? "珈珈待办"
                           : o === "老板"
-                            ? "老板待办"
+                            ? "Genji待办"
                             : o}
                       </TabsTrigger>
                     ))}
