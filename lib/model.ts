@@ -7,7 +7,7 @@ export type ResourceLink = {
 };
 export type RecordItem = {
   id: string;
-  kind: "resource" | "task";
+  kind: "resource" | "task" | "schedule";
   name: string;
   type: string;
   business: string;
@@ -57,18 +57,18 @@ export const today = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-export const fresh = (kind: "resource" | "task"): RecordItem => ({
+export const fresh = (kind: "resource" | "task" | "schedule"): RecordItem => ({
   id: crypto.randomUUID(),
   kind,
   name: "",
-  type: "合作伙伴",
+  type: kind === "schedule" ? "日程" : "合作伙伴",
   business: "内容商单",
   priority: "P2",
   contact: "",
   city: "",
   channel: "",
   opportunity: "",
-  owner: "我",
+  owner: kind === "schedule" ? "老板" : "我",
   status: kind === "resource" ? "待联系" : "待处理",
   planned: "",
   time: "",

@@ -2,7 +2,7 @@ import { z } from "zod";
 const str = z.string().max(20000).default("");
 export const recordSchema = z.object({
   id: z.string().min(1).max(100),
-  kind: z.enum(["resource", "task"]),
+  kind: z.enum(["resource", "task", "schedule"]),
   name: z.string().trim().min(1).max(300),
   type: str,
   business: str,
@@ -11,7 +11,7 @@ export const recordSchema = z.object({
   city: str,
   channel: str,
   opportunity: str,
-  owner: z.enum(["我", "老板"]).default("我"),
+  owner: z.enum(["我", "老板", "乔伊"]).default("我"),
   status: str,
   planned: z
     .string()

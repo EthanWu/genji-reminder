@@ -82,6 +82,7 @@ const nav = [
   ["总览", LayoutDashboard],
   ["资源库", Layers3],
   ["待办事项", ListTodo],
+  ["Genji日程", Clock3],
   ["日历", CalendarDays],
   ["自然语言录入", Sparkles],
   ["设置与数据", Settings2],
@@ -161,6 +162,7 @@ export default function Home() {
     [apiReady, setApiReady] = useState(false),
     [aiAnswer, setAiAnswer] = useState(""),
     [who, setWho] = useState("我");
+  const [scheduleMode, setScheduleMode] = useState("list");
   const day = today();
   function notify(s: string) {
     setToast(s);
@@ -201,7 +203,8 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
   const resources = items.filter((i) => i.kind === "resource"),
-    tasks = items.filter((i) => i.kind === "task");
+    tasks = items.filter((i) => i.kind === "task"),
+    schedules = items.filter((i) => i.kind === "schedule");
   const effective = (t: RecordItem) =>
     t.status !== "已完成" && (!t.planned || t.planned < day) ? day : t.planned;
   const activeTasks = tasks.filter((t) => t.status !== "已完成");
@@ -255,7 +258,13 @@ export default function Home() {
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       if (detail?.id === item.id) {
         setDetail(null);
-        setView(item.kind === "resource" ? "资源库" : "待办事项");
+        setView(
+          item.kind === "resource"
+            ? "资源库"
+            : item.kind === "schedule"
+              ? "Genji日程"
+              : "待办事项",
+        );
       }
       setDeleteItem(null);
       notify("已删除");
@@ -347,7 +356,13 @@ export default function Home() {
       else
         setDrafts(
           d.records.map((x: Partial<RecordItem>) => ({
-            ...fresh(x.kind === "task" ? "task" : "resource"),
+            ...fresh(
+              x.kind === "task"
+                ? "task"
+                : x.kind === "schedule"
+                  ? "schedule"
+                  : "resource",
+            ),
             ...x,
             id: crypto.randomUUID(),
             revision: 0,
@@ -396,7 +411,13 @@ export default function Home() {
         if (!Array.isArray(list)) throw Error("文件需包含 records 数组");
         setDrafts(
           list.slice(0, 100).map((x) => ({
-            ...fresh(x.kind === "task" ? "task" : "resource"),
+            ...fresh(
+              x.kind === "task"
+                ? "task"
+                : x.kind === "schedule"
+                  ? "schedule"
+                  : "resource",
+            ),
             ...x,
             id: crypto.randomUUID(),
             revision: 0,
@@ -451,8 +472,12 @@ export default function Home() {
                 </strong>
                 <div className="taskmeta">
                   <span>
-                    {t.owner === "老板" ? "Genji" : "珈珈"} ·{" "}
-                    {t.category || "其他事项"}
+                    {t.owner === "老板"
+                      ? "Genji"
+                      : t.owner === "乔伊"
+                        ? "乔伊"
+                        : "珈珈"}{" "}
+                    · {t.category || "其他事项"}
                     {t.time && ` · ${t.time}`}
                   </span>
                   {t.topic && (
@@ -604,11 +629,13 @@ export default function Home() {
                       ? "完整档案、跟进情况、关联待办与外部资料。"
                       : view === "待办事项"
                         ? "明确负责人，保留反馈，让每件事都有着落。"
-                        : view === "日历"
-                          ? "看见老板与自己的安排。未完成事项按计划顺延，截止时间保持不变。"
-                          : view === "自然语言录入"
-                            ? "随手记下对话、资源和安排，核对后沉淀为档案。"
-                            : "管理数据备份、历史导入与 AI 连接。"}
+                        : view === "Genji日程"
+                          ? "Genji 的独立日程表，支持列表与日历两种视图。"
+                          : view === "日历"
+                            ? "看见老板与自己的安排。未完成事项按计划顺延，截止时间保持不变。"
+                            : view === "自然语言录入"
+                              ? "随手记下对话、资源和安排，核对后沉淀为档案。"
+                              : "管理数据备份、历史导入与 AI 连接。"}
               </p>
             </div>
             {view === "资源详情" ? (
@@ -626,13 +653,17 @@ export default function Home() {
                 onClick={() =>
                   view === "待办事项" || view === "日历"
                     ? createTask()
-                    : setEdit(fresh("resource"))
+                    : view === "Genji日程"
+                      ? setEdit(fresh("schedule"))
+                      : setEdit(fresh("resource"))
                 }
               >
                 <Plus size={17} />{" "}
                 {view === "待办事项" || view === "日历"
                   ? "新建待办"
-                  : "添加资源"}
+                  : view === "Genji日程"
+                    ? "新增日程"
+                    : "添加资源"}
               </Button>
             )}
           </div>
@@ -735,7 +766,7 @@ export default function Home() {
                   </div>
                   <Tabs value={owner} onValueChange={setOwner}>
                     <TabsList>
-                      {["全部", "老板", "我"].map((o) => (
+                      {["全部", "老板", "我", "乔伊"].map((o) => (
                         <TabsTrigger value={o} key={o}>
                           {o === "我"
                             ? "我的待办"
@@ -1154,12 +1185,102 @@ export default function Home() {
               </section>
             </div>
           )}
+          {view === "Genji日程" && (
+            <section className="panel">
+              <div className="filters">
+                <Tabs value={scheduleMode} onValueChange={setScheduleMode}>
+                  <TabsList>
+                    <TabsTrigger value="list">列表视图</TabsTrigger>
+                    <TabsTrigger value="calendar">日历视图</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              {scheduleMode === "list" ? (
+                <div className="schedule-list">
+                  {[...schedules]
+                    .sort((a, b) =>
+                      `${a.planned} ${a.time}`.localeCompare(
+                        `${b.planned} ${b.time}`,
+                      ),
+                    )
+                    .map((s) => (
+                      <article
+                        className="schedule-card"
+                        key={s.id}
+                        onClick={() => setEdit(s)}
+                      >
+                        <div className="schedule-time">
+                          {s.planned || "未定日期"} {s.time || "未定时间"}
+                        </div>
+                        <h3>{s.name}</h3>
+                        <div className="schedule-meta">
+                          {s.category} · {s.city || "地点待补充"}
+                        </div>
+                        {s.topic && (
+                          <p>
+                            <b>议题/主题：</b>
+                            {s.topic}
+                          </p>
+                        )}
+                        {s.attendees && (
+                          <p>
+                            <b>参会人员：</b>
+                            {s.attendees}
+                          </p>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteItem(s);
+                          }}
+                        >
+                          <Trash2 size={15} /> 删除
+                        </Button>
+                      </article>
+                    ))}
+                </div>
+              ) : (
+                <div className="calendar-grid">
+                  {Array.from(
+                    {
+                      length: new Date(
+                        Number(month.slice(0, 4)),
+                        Number(month.slice(5)),
+                        0,
+                      ).getDate(),
+                    },
+                    (_, i) => {
+                      const d = month + "-" + String(i + 1).padStart(2, "0"),
+                        ss = schedules.filter((s) => s.planned === d);
+                      return (
+                        <button
+                          className="day"
+                          key={d}
+                          onClick={() => setDate(d)}
+                        >
+                          <b>{i + 1}</b>
+                          {ss.slice(0, 3).map((s) => (
+                            <span key={s.id} className="boss">
+                              {s.time ? s.time + " " : "待定 "}
+                              {s.name}
+                            </span>
+                          ))}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              )}
+            </section>
+          )}
           {view === "待办事项" && (
             <section className="panel">
               <div className="filters">
                 <Tabs value={owner} onValueChange={setOwner}>
                   <TabsList>
-                    {["全部", "老板", "我"].map((o) => (
+                    {["全部", "老板", "我", "乔伊"].map((o) => (
                       <TabsTrigger value={o} key={o}>
                         {o === "我"
                           ? "我的待办"
@@ -1245,7 +1366,7 @@ export default function Home() {
                 </div>
                 <Tabs value={owner} onValueChange={setOwner}>
                   <TabsList>
-                    {["全部", "老板", "我"].map((o) => (
+                    {["全部", "老板", "我", "乔伊"].map((o) => (
                       <TabsTrigger key={o} value={o}>
                         {o}
                       </TabsTrigger>
@@ -1533,7 +1654,11 @@ export default function Home() {
         <DialogContent className="edit-dialog">
           <DialogTitle>
             {edit?.revision ? "编辑" : "新增"}
-            {edit?.kind === "resource" ? "资源档案" : "待办事项"}
+            {edit?.kind === "resource"
+              ? "资源档案"
+              : edit?.kind === "schedule"
+                ? "Genji日程"
+                : "待办事项"}
           </DialogTitle>
           <DialogDescription>
             保存合作脉络、明确下一步。带 * 的字段必填。
@@ -1549,7 +1674,12 @@ export default function Home() {
             >
               <div className="form-grid">
                 <label className="wide">
-                  {edit.kind === "resource" ? "资源 / 公司名称" : "待办内容"} *
+                  {edit.kind === "resource"
+                    ? "资源 / 公司名称"
+                    : edit.kind === "schedule"
+                      ? "日程名称"
+                      : "待办内容"}{" "}
+                  *
                   <Input
                     required
                     maxLength={300}
@@ -1617,7 +1747,7 @@ export default function Home() {
                   <Select
                     value={edit.owner}
                     onChange={(v) => setEdit({ ...edit, owner: v })}
-                    options={["我", "老板"]}
+                    options={["我", "老板", "乔伊"]}
                   />
                 </label>
                 <label>
@@ -1635,11 +1765,13 @@ export default function Home() {
                             "已合作",
                             "暂缓",
                           ]
-                        : ["待处理", "进行中", "等待反馈", "已完成"]
+                        : edit.kind === "schedule"
+                          ? ["待确认", "已确认", "已完成", "已取消"]
+                          : ["待处理", "进行中", "等待反馈", "已完成"]
                     }
                   />
                 </label>
-                {edit.kind === "task" && (
+                {(edit.kind === "task" || edit.kind === "schedule") && (
                   <>
                     <label>
                       事项分类
@@ -1649,9 +1781,11 @@ export default function Home() {
                           setEdit({ ...edit, category: e.target.value })
                         }
                       >
-                        {(edit.owner === "老板"
-                          ? ["会议", "电话会", "其他事项"]
-                          : ["工作推进", "沟通联系", "行政事项", "其他事项"]
+                        {(edit.kind === "schedule"
+                          ? ["线上会议", "线下会议", "直播演讲", "差旅行程"]
+                          : edit.owner === "老板"
+                            ? ["会议", "电话会", "其他事项"]
+                            : ["工作推进", "沟通联系", "行政事项", "其他事项"]
                         ).map((v) => (
                           <NativeSelectOption key={v} value={v}>
                             {v}
