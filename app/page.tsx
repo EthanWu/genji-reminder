@@ -163,6 +163,7 @@ export default function Home() {
     [who, setWho] = useState("我");
   const [scheduleMode, setScheduleMode] = useState("list");
   const [taskMode, setTaskMode] = useState("list");
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default");
   const day = today();
   function notify(s: string) {
     setToast(s);
@@ -202,9 +203,48 @@ export default function Home() {
     const timer = setInterval(() => refresh(), 60000);
     return () => clearInterval(timer);
   }, []);
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setNotificationPermission("unsupported");
+      return;
+    }
+    setNotificationPermission(Notification.permission);
+  }, []);
   const resources = items.filter((i) => i.kind === "resource"),
     tasks = items.filter((i) => i.kind === "task"),
     schedules = items.filter((i) => i.kind === "schedule");
+  useEffect(() => {
+    if (notificationPermission !== "granted") return;
+    const check = () => {
+      const now = Date.now();
+      schedules.forEach((s) => {
+        if (!s.planned || !s.time || s.status === "已完成" || s.status === "已取消") return;
+        const start = new Date(`${s.planned}T${s.time}:00+08:00`).getTime();
+        const remaining = start - now;
+        if (remaining <= 30 * 60 * 1000 && remaining > 0) {
+          const key = `heipu-schedule-notified:${s.id}:${s.planned}:${s.time}`;
+          if (localStorage.getItem(key)) return;
+          localStorage.setItem(key, "1");
+          new Notification(`Genji日程将在${Math.max(1, Math.round(remaining / 60000))}分钟后开始`, {
+            body: `${s.name}${s.city ? ` · ${s.city}` : ""}`,
+            tag: key,
+          });
+        }
+      });
+    };
+    check();
+    const timer = window.setInterval(check, 30000);
+    return () => window.clearInterval(timer);
+  }, [schedules, notificationPermission]);
+  async function enableNotifications() {
+    if (!("Notification" in window)) {
+      notify("当前浏览器不支持桌面通知");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    notify(permission === "granted" ? "桌面通知已开启" : "未获得桌面通知权限");
+  }
   const scheduleGroups = Object.entries(
     schedules.reduce<Record<string, RecordItem[]>>((groups, schedule) => {
       const key = schedule.planned || "未安排日期";
@@ -1218,6 +1258,15 @@ export default function Home() {
                     <TabsTrigger value="calendar">日历视图</TabsTrigger>
                   </TabsList>
                 </Tabs>
+                {notificationPermission !== "unsupported" && (
+                  <Button
+                    variant={notificationPermission === "granted" ? "secondary" : "outline"}
+                    onClick={enableNotifications}
+                  >
+                    <Bell size={16} />
+                    {notificationPermission === "granted" ? "桌面通知已开启" : "开启桌面通知"}
+                  </Button>
+                )}
               </div>
               {scheduleMode === "list" ? (
                 <div className="schedule-list">
