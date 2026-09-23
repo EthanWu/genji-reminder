@@ -761,6 +761,17 @@ h1 {
   padding: 3px 5px;
   border-radius: 5px;
 }
+.day.holiday {
+  background: #fff3e3;
+  border-color: #f0c98d;
+}
+.holiday-label {
+  display: block;
+  margin-top: 4px;
+  color: #b27635;
+  font-size: 10px;
+  font-weight: 700;
+}
 .day span {
   display: block;
   white-space: nowrap;

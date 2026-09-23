@@ -78,6 +78,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RecordItem, fresh, today, types, businesses } from "@/lib/model";
 import { seeds } from "@/lib/seeds";
+import { statutoryHolidays } from "@/lib/holidays";
 const nav = [
   ["总览", LayoutDashboard],
   ["资源库", Layers3],
@@ -1390,6 +1391,7 @@ export default function Home() {
                             <button
                               className={
                                 "day " +
+                                (statutoryHolidays[d] ? "holiday " : "") +
                                 (d === date ? "selected " : "") +
                                 (d === day ? "today" : "")
                               }
@@ -1397,6 +1399,7 @@ export default function Home() {
                               onClick={() => setDate(d)}
                             >
                               <b>{i + 1}</b>
+                              {statutoryHolidays[d] && <small className="holiday-label">{statutoryHolidays[d]}</small>}
                               {ss.slice(0, 3).map((s) => (
                                 <span key={s.id} className={`boss ${s.status === "已完成" ? "calendar-completed" : ""}`}>
                                   {s.time ? s.time + " " : "待定 "}
@@ -1613,6 +1616,7 @@ export default function Home() {
                         <button
                           className={
                             "day " +
+                            (statutoryHolidays[d] ? "holiday " : "") +
                             (d === date ? "selected " : "") +
                             (d === day ? "today" : "")
                           }
@@ -1620,6 +1624,7 @@ export default function Home() {
                           onClick={() => setDate(d)}
                         >
                           <b>{i + 1}</b>
+                          {statutoryHolidays[d] && <small className="holiday-label">{statutoryHolidays[d]}</small>}
                           {ts.slice(0, 3).map((t) => (
                             <span
                               className={t.owner === "老板" ? "boss" : ""}
