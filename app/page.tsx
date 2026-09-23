@@ -1296,7 +1296,7 @@ export default function Home() {
                                 onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(c) => save({ ...s, status: c ? "已完成" : "待确认" }, false)}
                               />
-                              {s.time || "未定时间"}
+                              {s.planned || "未安排日期"} · {s.time || "待补充具体时间"}
                             </div>
                             <h3>{s.name}</h3>
                             <div className="schedule-meta">
@@ -1309,16 +1309,18 @@ export default function Home() {
                             {s.attendees && (
                               <p><b>参会人员：</b>{s.attendees}</p>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteItem(s);
-                              }}
-                            >
-                              <Trash2 size={15} /> 删除
-                            </Button>
+                            <div className="schedule-card-footer">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteItem(s);
+                                }}
+                              >
+                                <Trash2 size={15} /> 删除
+                              </Button>
+                            </div>
                           </article>
                         ))}
                       </div>
