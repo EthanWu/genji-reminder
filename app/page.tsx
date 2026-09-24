@@ -178,6 +178,8 @@ export default function Home() {
     category: item.category || "其他事项",
     attendees: item.attendees || "",
     topic: item.topic || "",
+    resourceIds: item.resourceIds || (item.resourceId ? [item.resourceId] : []),
+    scheduleIds: item.scheduleIds || [],
   });
   async function refresh() {
     setLoading(true);
@@ -543,6 +545,12 @@ export default function Home() {
                     <span>
                       <b>参会人员</b>：{t.attendees}
                     </span>
+                  )}
+                  {(t.resourceIds?.length || t.resourceId) && (
+                    <span><b>关联资源</b>：{(t.resourceIds?.length ? t.resourceIds : [t.resourceId]).map((id) => resources.find((r) => r.id === id)?.name).filter(Boolean).join("、")}</span>
+                  )}
+                  {t.scheduleIds?.length > 0 && (
+                    <span><b>关联日程</b>：{t.scheduleIds.map((id) => schedules.find((s) => s.id === id)?.name).filter(Boolean).join("、")}</span>
                   )}
                   {t.deadline && (
                     <span className={t.deadline < day ? "late" : ""}>
@@ -1253,7 +1261,7 @@ export default function Home() {
                     value=""
                     onChange={(e) => {
                       const task = tasks.find((t) => t.id === e.target.value);
-                      if (task) save({ ...task, resourceId: detail.id }, false);
+                      if (task) save({ ...task, resourceId: detail.id, resourceIds: Array.from(new Set([...(task.resourceIds || []), detail.id])) }, false);
                     }}
                   >
                     <NativeSelectOption value="">选择已有待办进行关联</NativeSelectOption>
@@ -1265,7 +1273,7 @@ export default function Home() {
                     value=""
                     onChange={(e) => {
                       const schedule = schedules.find((s) => s.id === e.target.value);
-                      if (schedule) save({ ...schedule, resourceId: detail.id }, false);
+                      if (schedule) save({ ...schedule, resourceId: detail.id, resourceIds: Array.from(new Set([...(schedule.resourceIds || []), detail.id])) }, false);
                     }}
                   >
                     <NativeSelectOption value="">选择已有日程进行关联</NativeSelectOption>
@@ -1274,7 +1282,7 @@ export default function Home() {
                     ))}
                   </NativeSelect>
                 </div>
-                {taskRows(tasks.filter((t) => t.resourceId === detail.id))}
+                {taskRows(tasks.filter((t) => t.resourceId === detail.id || t.resourceIds?.includes(detail.id)))}
               </section>
               <section className="panel">
                 <div className="panel-head">
@@ -1292,7 +1300,7 @@ export default function Home() {
                 </div>
                 <div className="linked-schedule-list">
                   {schedules
-                    .filter((s) => s.resourceId === detail.id)
+                    .filter((s) => s.resourceId === detail.id || s.resourceIds?.includes(detail.id))
                     .sort((a, b) => `${a.planned} ${a.time}`.localeCompare(`${b.planned} ${b.time}`))
                     .map((s) => (
                       <button className="linked-schedule-item" key={s.id} onClick={() => setEdit(s)}>
@@ -1301,7 +1309,7 @@ export default function Home() {
                         <small>{s.category} · {s.city || "地点待补充"}</small>
                       </button>
                     ))}
-                  {!schedules.some((s) => s.resourceId === detail.id) && (
+                  {!schedules.some((s) => s.resourceId === detail.id || s.resourceIds?.includes(detail.id)) && (
                     <div className="empty compact">还没有关联日程，可从这里直接添加。</div>
                   )}
                 </div>
@@ -2111,23 +2119,32 @@ export default function Home() {
                       />
                     </label>
                     <label className="wide">
-                      关联资源
-                      <NativeSelect
-                        value={edit.resourceId}
-                        onChange={(e) =>
-                          setEdit({ ...edit, resourceId: e.target.value })
-                        }
+                      关联资源（可多选）
+                      <select
+                        className="multi-association-select"
+                        multiple
+                        value={edit.resourceIds?.length ? edit.resourceIds : edit.resourceId ? [edit.resourceId] : []}
+                        onChange={(e) => {
+                          const ids = Array.from(e.target.selectedOptions, (o) => o.value);
+                          setEdit({ ...edit, resourceIds: ids, resourceId: ids[0] || "" });
+                        }}
                       >
-                        <NativeSelectOption value="">
-                          不关联资源
-                        </NativeSelectOption>
-                        {resources.map((r) => (
-                          <NativeSelectOption value={r.id} key={r.id}>
-                            {r.name}
-                          </NativeSelectOption>
-                        ))}
-                      </NativeSelect>
+                        {resources.map((r) => <option value={r.id} key={r.id}>{r.name}</option>)}
+                      </select>
                     </label>
+                    {edit.kind === "task" && (
+                      <label className="wide">
+                        关联日程（可多选）
+                        <select
+                          className="multi-association-select"
+                          multiple
+                          value={edit.scheduleIds || []}
+                          onChange={(e) => setEdit({ ...edit, scheduleIds: Array.from(e.target.selectedOptions, (o) => o.value) })}
+                        >
+                          {schedules.map((s) => <option value={s.id} key={s.id}>{s.planned || "未安排日期"} · {s.name}</option>)}
+                        </select>
+                      </label>
+                    )}
                     <label className="wide">
                       会议议题（可留空）
                       <Input

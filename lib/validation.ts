@@ -29,6 +29,8 @@ export const recordSchema = z.object({
     .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s))
     .default(""),
   resourceId: str,
+  resourceIds: z.array(z.string().max(100)).max(100).default([]),
+  scheduleIds: z.array(z.string().max(100)).max(100).default([]),
   source: str,
   verified: z.boolean().default(false),
   notes: z

@@ -25,6 +25,8 @@ export type RecordItem = {
   topic: string;
   deadline: string;
   resourceId: string;
+  resourceIds: string[];
+  scheduleIds: string[];
   source: string;
   verified: boolean;
   notes: { text: string; at: string; by: string }[];
@@ -77,6 +79,8 @@ export const fresh = (kind: "resource" | "task" | "schedule"): RecordItem => ({
   topic: "",
   deadline: "",
   resourceId: "",
+  resourceIds: [],
+  scheduleIds: [],
   source: "手动录入",
   verified: true,
   notes: [],

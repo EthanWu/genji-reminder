@@ -918,6 +918,16 @@ h1 {
   gap: 10px;
   margin-bottom: 12px;
 }
+.multi-association-select {
+  min-height: 92px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #d5e5e6;
+  border-radius: 9px;
+  background: #fbfefe;
+  color: #355c65;
+  font: inherit;
+}
 .linked-schedule-item {
   display: grid;
   gap: 4px;
