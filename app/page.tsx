@@ -1246,7 +1246,63 @@ export default function Home() {
                     <Plus size={16} /> 添加待办
                   </Button>
                 </div>
+                <div className="association-pickers">
+                  <NativeSelect
+                    value=""
+                    onChange={(e) => {
+                      const task = tasks.find((t) => t.id === e.target.value);
+                      if (task) save({ ...task, resourceId: detail.id }, false);
+                    }}
+                  >
+                    <NativeSelectOption value="">选择已有待办进行关联</NativeSelectOption>
+                    {tasks.filter((t) => t.resourceId !== detail.id).map((t) => (
+                      <NativeSelectOption key={t.id} value={t.id}>{t.name}</NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  <NativeSelect
+                    value=""
+                    onChange={(e) => {
+                      const schedule = schedules.find((s) => s.id === e.target.value);
+                      if (schedule) save({ ...schedule, resourceId: detail.id }, false);
+                    }}
+                  >
+                    <NativeSelectOption value="">选择已有日程进行关联</NativeSelectOption>
+                    {schedules.filter((s) => s.resourceId !== detail.id).map((s) => (
+                      <NativeSelectOption key={s.id} value={s.id}>{s.name}</NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                </div>
                 {taskRows(tasks.filter((t) => t.resourceId === detail.id))}
+              </section>
+              <section className="panel">
+                <div className="panel-head">
+                  <h2>
+                    关联日程 <span>{schedules.filter((s) => s.resourceId === detail.id).length}</span>
+                  </h2>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setEdit({ ...fresh("schedule"), resourceId: detail.id })
+                    }
+                  >
+                    <Plus size={16} /> 添加日程
+                  </Button>
+                </div>
+                <div className="linked-schedule-list">
+                  {schedules
+                    .filter((s) => s.resourceId === detail.id)
+                    .sort((a, b) => `${a.planned} ${a.time}`.localeCompare(`${b.planned} ${b.time}`))
+                    .map((s) => (
+                      <button className="linked-schedule-item" key={s.id} onClick={() => setEdit(s)}>
+                        <span className="linked-schedule-time">{s.planned || "未安排日期"} · {s.time || "未定时间"}</span>
+                        <strong>{s.name}</strong>
+                        <small>{s.category} · {s.city || "地点待补充"}</small>
+                      </button>
+                    ))}
+                  {!schedules.some((s) => s.resourceId === detail.id) && (
+                    <div className="empty compact">还没有关联日程，可从这里直接添加。</div>
+                  )}
+                </div>
               </section>
             </div>
           )}
