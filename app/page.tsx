@@ -493,6 +493,8 @@ export default function Home() {
         {[...list]
           .sort(
             (a, b) =>
+              ({ P0: 0, P1: 1, P2: 2, P3: 3 }[a.priority] ?? 9) -
+                ({ P0: 0, P1: 1, P2: 2, P3: 3 }[b.priority] ?? 9) ||
               (a.time ? 0 : 1) - (b.time ? 0 : 1) ||
               a.time.localeCompare(b.time),
           )
