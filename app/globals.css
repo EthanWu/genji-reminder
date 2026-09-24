@@ -928,6 +928,35 @@ h1 {
   color: #355c65;
   font: inherit;
 }
+.association-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid #d5e5e6;
+  border-radius: 12px;
+  background: #fbfefe;
+}
+.association-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #355c65;
+  cursor: pointer;
+}
+.association-option.selected {
+  border-color: rgba(58, 139, 139, 0.35);
+  background: rgba(201, 232, 226, 0.7);
+}
+.association-option input { accent-color: #3f8f8e; flex: 0 0 auto; }
+.association-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.association-empty { padding: 8px; color: #82989d; font-size: 13px; }
 .linked-schedule-item {
   display: grid;
   gap: 4px;

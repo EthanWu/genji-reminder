@@ -2120,29 +2120,36 @@ export default function Home() {
                     </label>
                     <label className="wide">
                       关联资源（可多选）
-                      <select
-                        className="multi-association-select"
-                        multiple
-                        value={edit.resourceIds?.length ? edit.resourceIds : edit.resourceId ? [edit.resourceId] : []}
-                        onChange={(e) => {
-                          const ids = Array.from(e.target.selectedOptions, (o) => o.value);
-                          setEdit({ ...edit, resourceIds: ids, resourceId: ids[0] || "" });
-                        }}
-                      >
-                        {resources.map((r) => <option value={r.id} key={r.id}>{r.name}</option>)}
-                      </select>
+                      <div className="association-options">
+                        {resources.length ? resources.map((r) => {
+                          const selected = (edit.resourceIds?.length ? edit.resourceIds : edit.resourceId ? [edit.resourceId] : []).includes(r.id);
+                          return <label className={`association-option${selected ? " selected" : ""}`} key={r.id}>
+                            <input type="checkbox" checked={selected} onChange={() => {
+                              const current = edit.resourceIds?.length ? edit.resourceIds : edit.resourceId ? [edit.resourceId] : [];
+                              const ids = selected ? current.filter((id) => id !== r.id) : [...current, r.id];
+                              setEdit({ ...edit, resourceIds: ids, resourceId: ids[0] || "" });
+                            }} />
+                            <span>{r.name}</span>
+                          </label>;
+                        }) : <span className="association-empty">暂无资源</span>}
+                      </div>
                     </label>
                     {edit.kind === "task" && (
                       <label className="wide">
                         关联日程（可多选）
-                        <select
-                          className="multi-association-select"
-                          multiple
-                          value={edit.scheduleIds || []}
-                          onChange={(e) => setEdit({ ...edit, scheduleIds: Array.from(e.target.selectedOptions, (o) => o.value) })}
-                        >
-                          {schedules.map((s) => <option value={s.id} key={s.id}>{s.planned || "未安排日期"} · {s.name}</option>)}
-                        </select>
+                        <div className="association-options">
+                          {schedules.length ? schedules.map((s) => {
+                            const selected = (edit.scheduleIds || []).includes(s.id);
+                            return <label className={`association-option${selected ? " selected" : ""}`} key={s.id}>
+                              <input type="checkbox" checked={selected} onChange={() => {
+                                const current = edit.scheduleIds || [];
+                                const ids = selected ? current.filter((id) => id !== s.id) : [...current, s.id];
+                                setEdit({ ...edit, scheduleIds: ids });
+                              }} />
+                              <span>{s.planned || "未安排日期"} · {s.name}</span>
+                            </label>;
+                          }) : <span className="association-empty">暂无日程</span>}
+                        </div>
                       </label>
                     )}
                     <label className="wide">
