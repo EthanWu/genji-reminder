@@ -1,29 +1,45 @@
 # 嘿噗 · 资源与日程
 
-私人资源与行动工作台，React + Vinext + Cloudflare D1。
+预览地址：https://genji-reminder.vercel.app
 
-## 已实现
-- 资源：名称、类型、主要业务、联系人、城市、来源、契机、优先级、状态、核实标记。
-- 待办：老板/我、计划日期、硬截止日期、资源关联、完成状态。
-- 不修改原始计划与截止日期，未完成旧计划在日历和今日视图显示于今天。
-- 跟进时间线、数据库持久保存、版本冲突检查。
-- 自然语言草稿/问答已切换为火山方舟接口，当前模型尚未开通。
-- TXT/MD文本读入、JSON草稿导入与完整备份导出。
-- 10条带历史出处的资源线索，首次空库初始化；未确认为最新状态。
+当前身份服务使用 Clerk 开发实例，按用户要求先用 Vercel 地址预览；正式身份实例需要后续配置自有域名和 DNS。
 
-## 当前边界
-- 仅私人访问，未开放多人权限管理。
-- 桌面通知仅用户点击时发送；没有关闭网页后的定时推送。
-- 日历以天为单位，未支持小时级会议、重复日程或第三方日历同步。
-- AI检索为有界关键词检索，最多24条相关记录，不代表无限上下文；模型结果需人工核对。
-- JSON导入每次最多100条，3MB文件上限，AI文本上限20000字符。
-- 密钥已作为Sites服务端机密配置。真实测试返回ModelNotOpen，需提供已开通模型ID或开通默认模型。
+私人资源与行动工作台，Next.js + Vercel Functions + Vercel Marketplace Neon Postgres。
 
-## 运行
-`npm run dev`；`npm run build`；`npx tsc --noEmit`。
-服务端环境变量：ARK_API_KEY、ARK_MODEL（默认doubao-seed-2-0-lite-260215），火山方舟北京接入点。
-生产环境密钥通过Sites管理，不放进网页、Git或数据库备份。
+- 资源、待办、Genji 日程、跟进时间线、JSON 导入和完整备份导出。
+- 数据保存到 Postgres，使用 revision 条件更新处理并发冲突。
+- 自然语言草稿和档案问答通过 Vercel AI SDK / AI Gateway 调用，结果需要人工核对。
+- 单邮箱验证码登录：Clerk 验证会话，服务端只允许 ALLOWED_EMAIL 对应的已验证主邮箱。每个页面及 API 均校验权限。没有密码登录或公开注册入口。
 
-## 检查
-已检查资源导入、创建老板任务、追加跟进、刷新后持久化、并发修订冲突、旧计划顺延与硬截止保留、窄屏导航及视觉。
-测试记录仅创建于本地数据库，验证后已删除。
+## Vercel 配置
+
+Vercel 项目：Taowhale / genji-reminder。Neon、Clerk 是 Vercel Marketplace 合作方服务，数据库和身份服务并非 Vercel 自研产品。
+
+1. 将项目连接 Marketplace Neon 和 Clerk。
+2. 创建 jiajia@taowhale.com 用户；应用登录页只展示邮箱验证码流程，未提供密码、社交登录或注册入口。正式发布时在 Clerk 中禁用其他登录策略。不需要购买 Clerk 白名单功能，应用自身执行邮箱白名单。
+3. 设置服务端 ALLOWED_EMAIL=jiajia@taowhale.com 和 AI_GATEWAY_MODEL=openai/gpt-5-mini。
+4. 数据库及 Clerk 环境变量由集成提供。AI Gateway 使用 Vercel OIDC，或服务端 AI_GATEWAY_API_KEY；不使用火山方舟密钥。
+5. 拉取环境变量后运行迁移，再构建部署。
+
+```sh
+npm ci
+npx vercel env pull .env.local --yes --scope taowhale
+npm run db:migrate
+npm run dev
+npm run typecheck
+npm test
+npm run build
+npx vercel --prod --scope taowhale
+```
+
+本地地址为 http://localhost:5173（与 Clerk 的回环地址规范化一致）。首次数据迁移可用 `npm run db:migrate -- outputs/local-records-backup.json`；按 ID 跳过已存在记录，不覆盖线上数据。`outputs` 是忽略目录，含迁移前备份，不能上传到公开仓库。
+
+真实数据库验证：`node --env-file=.env.local tests/database.integration.mjs`。
+
+## 边界
+
+本次迁移使用本地 D1 的 10 条初始化资源，不代表旧线上数据库最新状态。仓库中的 data/records-export.json 是旧导出，不自动混入。
+
+桌面通知只在用户点击时发送，未提供关闭网页后的定时推送。日历以天为单位，无重复日程和第三方同步。AI 检索最多 24 条相关档案，不能视作遍历全部档案。
+
+邮箱送达及真正验证码登录必须使用收件箱验证；自动化测试不能替代真实用户验证。

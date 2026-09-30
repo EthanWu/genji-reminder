@@ -1,0 +1,10 @@
+outputs
+work
+.wrangler
+.sites-runtime
+dist
+netlify
+.openai
+
+*.tsbuildinfo
+.env*

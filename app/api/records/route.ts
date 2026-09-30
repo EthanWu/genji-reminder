@@ -1,7 +1,39 @@
-import {db} from '@/db/raw';
-import {recordSchema} from '@/lib/validation';
-import {env} from 'cloudflare:workers';
-function gate(req:Request){const u=new URL(req.url);if(u.hostname==='localhost'||u.hostname==='127.0.0.1')return null;const secret=(env as unknown as Record<string,string>).HEIPU_PROXY_SECRET;if(secret&&req.headers.get('x-heipu-proxy-secret')===secret)return null;if(!req.headers.get('oai-authenticated-user-id'))return Response.json({error:'请先登录再操作'},{status:401});if(req.method!=='GET'&&req.headers.get('origin')!==u.origin)return Response.json({error:'请求来源不符'},{status:403});return null;}
-export async function GET(req:Request){const denied=gate(req);if(denied)return denied;try{const {results}=await db().prepare('SELECT data,revision FROM records ORDER BY updated_at DESC').all<{data:string,revision:number}>();return Response.json({records:results.map(x=>({...JSON.parse(x.data),revision:x.revision}))});}catch{return Response.json({error:'暂时无法读取资源，请稍后重试。输入不会被清空。'},{status:503});}}
-export async function POST(req:Request){const denied=gate(req);if(denied)return denied;try{const parsed=recordSchema.safeParse(await req.json());if(!parsed.success)return Response.json({error:'记录格式不正确，请检查名称、优先级、日期和跟进内容'},{status:400});const item=parsed.data;if(!item.id||!['resource','task','schedule'].includes(item.kind)||!item.name?.trim()||item.name.length>300||JSON.stringify(item).length>150000)return Response.json({error:'请填写名称，单条记录不超过 150KB'},{status:400});const now=new Date().toISOString();let result;if(item.revision===0){result=await db().prepare('INSERT OR IGNORE INTO records(id,kind,name,data,revision,updated_at) VALUES(?,?,?,?,1,?)').bind(item.id,item.kind,item.name,JSON.stringify(item),now).run();}else{result=await db().prepare('UPDATE records SET name=?,data=?,revision=revision+1,updated_at=? WHERE id=? AND revision=?').bind(item.name,JSON.stringify(item),now,item.id,item.revision).run();}if(result.meta.changes===0)return Response.json({error:'这条记录已被更新，请刷新后再编辑；当前输入仍然保留。'},{status:409});return Response.json({record:{...item,revision:item.revision+1}});}catch{return Response.json({error:'保存失败，请重试。当前输入已保留。'},{status:503});}}
-export async function DELETE(req:Request){const denied=gate(req);if(denied)return denied;try{const {id,revision}=await req.json() as {id:string;revision:number};const r=await db().prepare('DELETE FROM records WHERE id=? AND revision=?').bind(id,revision).run();if(!r.meta.changes)return Response.json({error:'记录已变更，请刷新后再试'},{status:409});return Response.json({ok:true});}catch{return Response.json({error:'删除失败'},{status:503});}}
+import { getSql } from '@/db';
+import { recordSchema } from '@/lib/validation';
+import { requireApiAccess } from '@/lib/auth';
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: Request) {
+  const denied = await requireApiAccess(req); if (denied) return denied;
+  try {
+    const rows = await getSql()`SELECT data,revision FROM records ORDER BY updated_at DESC`;
+    return Response.json({records: rows.map(x => ({...x.data, revision:x.revision}))});
+  } catch { return Response.json({error:'暂时无法读取资源，请稍后重试。输入不会被清空。'},{status:503}); }
+}
+
+export async function POST(req: Request) {
+  const denied = await requireApiAccess(req); if (denied) return denied;
+  try {
+    const parsed = recordSchema.safeParse(await req.json());
+    if (!parsed.success) return Response.json({error:'记录格式不正确，请检查名称、优先级、日期和跟进内容'},{status:400});
+    const item = parsed.data;
+    if (JSON.stringify(item).length > 150000) return Response.json({error:'单条记录不超过 150KB'},{status:400});
+    const sql = getSql();
+    const rows = item.revision === 0
+      ? await sql`INSERT INTO records(id,kind,name,data,revision) VALUES (${item.id},${item.kind},${item.name},${JSON.stringify(item)}::jsonb,1) ON CONFLICT(id) DO NOTHING RETURNING revision`
+      : await sql`UPDATE records SET name=${item.name},data=${JSON.stringify(item)}::jsonb,revision=revision+1,updated_at=now() WHERE id=${item.id} AND revision=${item.revision} RETURNING revision`;
+    if (!rows.length) return Response.json({error:'这条记录已被更新，请刷新后再编辑；当前输入仍然保留。'},{status:409});
+    return Response.json({record:{...item,revision:rows[0].revision}});
+  } catch { return Response.json({error:'保存失败，请重试。当前输入已保留。'},{status:503}); }
+}
+
+export async function DELETE(req: Request) {
+  const denied = await requireApiAccess(req); if (denied) return denied;
+  try {
+    const {id,revision} = await req.json();
+    if (typeof id !== 'string' || !Number.isInteger(revision) || revision < 1) return Response.json({error:'记录格式不正确'},{status:400});
+    const rows = await getSql()`DELETE FROM records WHERE id=${id} AND revision=${revision} RETURNING id`;
+    if (!rows.length) return Response.json({error:'记录已变更，请刷新后再试'},{status:409});
+    return Response.json({ok:true});
+  } catch { return Response.json({error:'删除失败'},{status:503}); }
+}

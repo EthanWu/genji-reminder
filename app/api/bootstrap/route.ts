@@ -1,4 +1,12 @@
-import { db } from '@/db/raw';
+import { getSql } from '@/db';
 import { seeds } from '@/lib/seeds';
-import { env } from 'cloudflare:workers';
-export async function POST(req:Request){const u=new URL(req.url);const secret=(env as unknown as Record<string,string>).HEIPU_PROXY_SECRET;const proxyOk=!!secret&&req.headers.get('x-heipu-proxy-secret')===secret;if(!['localhost','127.0.0.1'].includes(u.hostname)&&!proxyOk&&(!req.headers.get('oai-authenticated-user-id')||req.headers.get('origin')!==u.origin))return Response.json({error:'请登录后操作'},{status:401});try{const count=await db().prepare('SELECT count(*) AS n FROM records').first<{n:number}>();if(!count?.n){await db().batch(seeds.map(s=>db().prepare('INSERT OR IGNORE INTO records(id,kind,name,data,revision,updated_at) VALUES(?,?,?,?,1,?)').bind(s.id,s.kind,s.name,JSON.stringify(s),new Date().toISOString())))}return Response.json({ok:true})}catch{return Response.json({error:'历史资源初始化失败，请重试'},{status:503})}}
+import { requireApiAccess } from '@/lib/auth';
+export async function POST(req: Request) {
+  const denied = await requireApiAccess(req); if (denied) return denied;
+  try {
+    const sql = getSql();
+    // One statement makes empty-database seeding atomic across concurrent requests.
+    await sql`INSERT INTO records(id,kind,name,data,revision) SELECT item->>'id','resource',item->>'name',item,1 FROM jsonb_array_elements(${JSON.stringify(seeds)}::jsonb) AS item WHERE NOT EXISTS(SELECT 1 FROM records) ON CONFLICT(id) DO NOTHING`;
+    return Response.json({ok:true});
+  } catch { return Response.json({error:'历史资源初始化失败，请重试'},{status:503}); }
+}
