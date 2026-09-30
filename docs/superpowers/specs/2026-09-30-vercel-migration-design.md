@@ -38,3 +38,5 @@
 
 ## 用户后续确认
 用户于本次会话确认先使用 Vercel 地址预览，正式域名及 Clerk 正式身份实例稍后配置。当前使用开发实例邮箱验证码登录，服务端邮箱白名单不变。
+
+用户追加授权 wulijun@taowhale.com。最终邮箱名单为 jiajia@taowhale.com,wulijun@taowhale.com，两者共享原工作台，其他邮箱拒绝访问。

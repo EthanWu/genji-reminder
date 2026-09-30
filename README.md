@@ -9,15 +9,15 @@
 - 资源、待办、Genji 日程、跟进时间线、JSON 导入和完整备份导出。
 - 数据保存到 Postgres，使用 revision 条件更新处理并发冲突。
 - 自然语言草稿和档案问答通过 Vercel AI SDK / AI Gateway 调用，结果需要人工核对。
-- 单邮箱验证码登录：Clerk 验证会话，服务端只允许 ALLOWED_EMAIL 对应的已验证主邮箱。每个页面及 API 均校验权限。没有密码登录或公开注册入口。
+- 指定邮箱验证码登录：Clerk 验证会话，服务端只允许 ALLOWED_EMAIL 逗号分隔名单内的已验证主邮箱。每个页面及 API 均校验权限。没有密码登录或公开注册入口。
 
 ## Vercel 配置
 
 Vercel 项目：Taowhale / genji-reminder。Neon、Clerk 是 Vercel Marketplace 合作方服务，数据库和身份服务并非 Vercel 自研产品。
 
 1. 将项目连接 Marketplace Neon 和 Clerk。
-2. 创建 jiajia@taowhale.com 用户；应用登录页只展示邮箱验证码流程，未提供密码、社交登录或注册入口。正式发布时在 Clerk 中禁用其他登录策略。不需要购买 Clerk 白名单功能，应用自身执行邮箱白名单。
-3. 设置服务端 ALLOWED_EMAIL=jiajia@taowhale.com 和 AI_GATEWAY_MODEL=openai/gpt-5-mini。
+2. 创建 jiajia@taowhale.com 和 wulijun@taowhale.com 用户；应用登录页只展示邮箱验证码流程，未提供密码、社交登录或注册入口。正式发布时在 Clerk 中禁用其他登录策略。不需要购买 Clerk 白名单功能，应用自身执行邮箱白名单。
+3. 设置服务端 ALLOWED_EMAIL=jiajia@taowhale.com,wulijun@taowhale.com 和 AI_GATEWAY_MODEL=openai/gpt-5-mini。
 4. 数据库及 Clerk 环境变量由集成提供。AI Gateway 使用 Vercel OIDC，或服务端 AI_GATEWAY_API_KEY；不使用火山方舟密钥。
 5. 拉取环境变量后运行迁移，再构建部署。
 

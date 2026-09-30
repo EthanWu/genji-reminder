@@ -7,3 +7,5 @@ test('rejects unverified owner email',()=>assert.equal(accessStatus({email:'jiaj
 test('accepts verified normalized owner email',()=>assert.equal(accessStatus({email:'JiaJia@taowhale.com',verified:true},'jiajia@taowhale.com'),200));
 test('missing whitelist fails closed',()=>assert.equal(accessStatus({email:'jiajia@taowhale.com',verified:true},undefined),403));
 test('rejects cross-origin and missing-origin writes',()=>{assert.equal(sameOrigin(new Request('https://example.com/api',{headers:{origin:'https://evil.com'}})),false);assert.equal(sameOrigin(new Request('https://example.com/api')),false);assert.equal(sameOrigin(new Request('https://example.com/api',{headers:{origin:'https://example.com'}})),true)});
+test('allows the additional specified verified email',()=>assert.equal(accessStatus({email:'wulijun@taowhale.com',verified:true},'jiajia@taowhale.com, wulijun@taowhale.com'),200));
+test('rejects emails outside the two-email whitelist',()=>assert.equal(accessStatus({email:'other@taowhale.com',verified:true},'jiajia@taowhale.com,wulijun@taowhale.com'),403));

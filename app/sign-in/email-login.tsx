@@ -3,6 +3,7 @@ import {useEffect, useState} from 'react';
 import {useSignIn, useAuth, SignOutButton} from '@clerk/nextjs';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
+import {isAllowedEmail} from '@/lib/access';
 
 export default function EmailLogin({allowedEmail}: {allowedEmail: string}) {
   const {signIn, fetchStatus} = useSignIn();
@@ -21,7 +22,7 @@ export default function EmailLogin({allowedEmail}: {allowedEmail: string}) {
   const pending = busy || fetchStatus === 'fetching';
   async function send() {
     setError('');
-    if (!allowedEmail || email.trim().toLowerCase() !== allowedEmail.toLowerCase()) {setError('此邮箱没有访问权限。');return;}
+    if (!isAllowedEmail(email,allowedEmail)) {setError('此邮箱没有访问权限。');return;}
     setBusy(true);
     try {
       const {error} = await signIn.emailCode.sendCode({emailAddress:email.trim()});

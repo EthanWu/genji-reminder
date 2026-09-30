@@ -1,6 +1,10 @@
+export function isAllowedEmail(email: string, allowedEmails: string | undefined): boolean {
+  return !!allowedEmails?.split(',').some(allowed => !!allowed.trim() && allowed.trim().toLowerCase() === email.trim().toLowerCase());
+}
+
 export function accessStatus(identity: {email: string; verified: boolean} | null, allowedEmail: string | undefined): number {
   if (!identity) return 401;
-  if (!allowedEmail || !identity.verified || identity.email.toLowerCase() !== allowedEmail.trim().toLowerCase()) return 403;
+  if (!identity.verified || !isAllowedEmail(identity.email, allowedEmail)) return 403;
   return 200;
 }
 
