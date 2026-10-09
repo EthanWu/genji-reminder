@@ -36,6 +36,14 @@ npx vercel --prod --scope taowhale
 
 真实数据库验证：`node --env-file=.env.local tests/database.integration.mjs`。
 
+## 自动检查与部署
+
+推送到 `main` 后，Vercel Git 集成自动构建并部署生产环境，地址为 https://reminder.taowhale.com。其他分支由 Vercel 创建预览部署。
+
+GitHub Actions 的 `.github/workflows/ci.yml` 在 `main` 推送和面向 `main` 的 PR 上运行 `npm ci`、测试和类型检查，也支持手动触发。CI 不需要生产密钥；生产构建及环境变量由 Vercel 管理。
+
+CI 与 Vercel 构建并行运行，目前 CI 检查不是生产发布的阻断条件。
+
 ## 边界
 
 本次迁移使用本地 D1 的 10 条初始化资源，不代表旧线上数据库最新状态。仓库中的 data/records-export.json 是旧导出，不自动混入。
