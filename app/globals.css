@@ -1542,3 +1542,17 @@ h1 {
     height: 30px;
   }
 }
+/* Local iteration: frosted workspace */
+body { background: radial-gradient(ellipse at 15% 10%,#dcebf6,transparent 55%),radial-gradient(ellipse at 85% 60%,#dcece6,transparent 55%),#edf1f7; color:#344b60; }
+.panel,.schedule-day-group,.schedule-card { background:rgba(255,255,255,.6); backdrop-filter:blur(22px); border:1px solid rgba(255,255,255,.85); border-radius:24px; box-shadow:0 15px 45px rgba(77,108,153,.07); }
+.drawer-launcher { display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin:24px 0 38px; }
+.drawer-launcher>button { text-align:left;padding:30px;min-height:190px;border-radius:28px;background:rgba(255,255,255,.58);border:1px solid white;box-shadow:8px 18px 40px #597ba51a;backdrop-filter:blur(24px);transition:transform .2s; }
+.drawer-launcher>button:hover {transform:translateY(-8px);}
+.drawer-launcher>button:nth-child(even){transform:translateY(12px)}
+.tentative-event h3,.tentative-event p {color:#a27799;}
+.custom-field-row{display:flex;gap:8px;margin:10px 0;}
+.project-track{padding:24px;margin:24px 0;border:1px solid #d5e1ec;border-radius:22px;}
+.horizontal-timeline{display:flex;overflow:auto;padding:24px 0;gap:24px;}
+.horizontal-timeline>div{min-width:220px;max-width:320px;border-top:2px solid #89aeb8;padding:16px;position:relative;}
+.horizontal-timeline>div:before{content:'';position:absolute;top:-6px;left:16px;width:10px;height:10px;background:#79a6af;border-radius:50%;}
+@media(max-width:800px){.drawer-launcher{grid-template-columns:repeat(2,1fr)}.custom-field-row{flex-wrap:wrap}}

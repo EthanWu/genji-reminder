@@ -112,6 +112,8 @@ export const seeds: RecordItem[] = entries.map((x, i) => ({
   topic: "",
   deadline: "",
   resourceId: "",
+  resourceIds: [],
+  scheduleIds: [],
   source,
   verified: false,
   notes: [],
