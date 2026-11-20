@@ -1,5 +1,6 @@
-const upstream = 'https://qingyu-resource-workspace.super-jelly-9940.chatgpt.site';
+const upstream = process.env.HEIPU_API_ORIGIN;
 export default async (request) => {
+  if (!upstream) return Response.json({error: "请先配置独立工作空间的 API 地址"},{status:503});
   const url = new URL(request.url);
   const target = upstream + url.pathname.replace(/^\/.netlify\/functions\/api/, '/api') + url.search;
   const headers = new Headers(request.headers);

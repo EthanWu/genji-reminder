@@ -80,7 +80,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RecordItem, fresh, today, types, businesses } from "@/lib/model";
-import { seeds } from "@/lib/seeds";
 import { statutoryHolidays } from "@/lib/holidays";
 import {cityColor, cityForDate, categoryColor as categoryTint} from "@/lib/schedule-colors";
 import {contactGroup,resourceType,projectState} from "@/lib/model";
@@ -380,16 +379,6 @@ export default function Home() {
       setLinkTitle("");
       setLinkUrl("");
     }
-  }
-  async function addHistory() {
-    setBusy(true);
-    let n = 0;
-    for (const s of seeds.filter((s) => !items.some((i) => i.id === s.id))) {
-      if (await save(s, false)) n++;
-      else break;
-    }
-    setBusy(false);
-    notify(`已导入 ${n} 条待核实资源`);
   }
   function createTask(r?: RecordItem) {
     setEdit({
@@ -1577,11 +1566,9 @@ export default function Home() {
               <section className="panel setting">
                 <h2>历史与备份</h2>
                 <p>
-                  历史记录保留原始出处和待核实标记。备份包含资源、待办及全部跟进记录。
+                  备份包含当前空间的资源、待办、日程、项目和跟进记录。
                 </p>
-                <Button disabled={busy || !!err} onClick={addHistory}>
-                  导入历史资源（去重）
-                </Button>
+
                 <Button
                   variant="outline"
                   disabled={loading || !!err}
