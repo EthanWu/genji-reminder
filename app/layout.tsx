@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
+import "./studio.css";
 
 export const metadata: Metadata = {
   title: "嘿噗 · 资源与日程",

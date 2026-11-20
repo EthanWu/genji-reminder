@@ -1,4 +1,5 @@
 import { getSql } from '@/db';
+import { projectFromResource } from '@/lib/project-transfer';
 import { recordSchema } from '@/lib/validation';
 import { requireApiAccess } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
@@ -19,9 +20,28 @@ export async function POST(req: Request) {
     const item = parsed.data;
     if (JSON.stringify(item).length > 150000) return Response.json({error:'单条记录不超过 150KB'},{status:400});
     const sql = getSql();
-    const rows = item.revision === 0
-      ? await sql`INSERT INTO records(id,kind,name,data,revision) VALUES (${item.id},${item.kind},${item.name},${JSON.stringify(item)}::jsonb,1) ON CONFLICT(id) DO NOTHING RETURNING revision`
-      : await sql`UPDATE records SET name=${item.name},data=${JSON.stringify(item)}::jsonb,revision=revision+1,updated_at=now() WHERE id=${item.id} AND revision=${item.revision} RETURNING revision`;
+    const project = item.kind === 'resource' && item.projectEnabled ? projectFromResource(item) : null;
+    const data = JSON.stringify(item);
+    const save = item.revision === 0
+      ? sql`INSERT INTO records(id,kind,name,data,revision) VALUES (${item.id},${item.kind},${item.name},${data}::jsonb,1) ON CONFLICT(id) DO NOTHING RETURNING revision`
+      : sql`UPDATE records SET name=${item.name},data=${data}::jsonb,revision=revision+1,updated_at=now() WHERE id=${item.id} AND revision=${item.revision} AND kind=${item.kind} RETURNING revision`;
+    const rows = project ? await sql`
+      WITH inserted AS (
+        INSERT INTO records(id,kind,name,data,revision)
+        SELECT ${item.id},${item.kind},${item.name},${data}::jsonb,1 WHERE ${item.revision}::int = 0
+        ON CONFLICT(id) DO NOTHING RETURNING revision
+      ), updated AS (
+        UPDATE records SET name=${item.name},data=${data}::jsonb,revision=revision+1,updated_at=now()
+        WHERE id=${item.id} AND kind=${item.kind} AND revision=${item.revision} AND ${item.revision}::int > 0
+        RETURNING revision
+      ), saved AS (SELECT revision FROM inserted UNION ALL SELECT revision FROM updated),
+      created_project AS (
+        INSERT INTO records(id,kind,name,data,revision)
+        SELECT ${project.id},${project.kind},${project.name},${JSON.stringify(project)}::jsonb,1 FROM saved
+        ON CONFLICT(id) DO NOTHING
+      )
+      SELECT revision FROM saved
+    ` : await save;
     if (!rows.length) return Response.json({error:'这条记录已被更新，请刷新后再编辑；当前输入仍然保留。'},{status:409});
     return Response.json({record:{...item,revision:rows[0].revision}});
   } catch { return Response.json({error:'保存失败，请重试。当前输入已保留。'},{status:503}); }

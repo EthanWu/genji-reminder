@@ -61,11 +61,10 @@
 app/page.tsx              主界面、资源库、详情页、待办、日历、设置
 app/globals.css           纪念碑谷风格的蓝绿色视觉与响应式样式
 app/api/records/route.ts  资源和待办的增删改查接口
-app/api/bootstrap/route.ts首次初始化历史资源
+app/api/bootstrap/route.ts初始化空表
 app/api/ai/route.ts       火山方舟自然语言整理和问答接口
 lib/model.ts              RecordItem、ResourceLink、类型和业务枚举
 lib/validation.ts         Zod 数据校验
-lib/seeds.ts              初始历史资源线索
 lib/utils.ts               通用工具
 ```
 
@@ -137,7 +136,7 @@ GET    /api/records       获取资源和待办
 POST   /api/records       新建记录
 PUT    /api/records       更新记录，需要匹配 revision
 DELETE /api/records?id=   删除记录
-POST   /api/bootstrap     首次空库初始化历史资源
+POST   /api/bootstrap     初始化工作空间表结构
 GET    /api/ai            查看 AI 配置状态
 POST   /api/ai            自然语言整理或问答
 ```
@@ -180,7 +179,7 @@ npm run build
 ## 9. 迁移时的注意事项
 
 - 不要把生产密钥复制到这个文档或公开代码仓库。
-- 初始资源来自历史工作记录，部分联系人、城市和状态仍需要人工核实。
+- 此分支不附带业务记录，部署时绑定独立空库。
 - AI 输出是辅助整理结果，涉及人名、关系、合作进度和日期时必须人工确认。
 - 迁移到其他平台时，优先保留 `id`、`resourceId`、`revision`、`notes` 和 `links` 字段，避免资源与待办关联丢失。
 

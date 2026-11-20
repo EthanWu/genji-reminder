@@ -7,7 +7,7 @@ export type ResourceLink = {
 };
 export type RecordItem = {
   id: string;
-  kind: "resource" | "task" | "schedule";
+  kind: "resource" | "task" | "schedule" | "project";
   name: string;
   type: string;
   business: string;
@@ -29,20 +29,28 @@ export type RecordItem = {
   scheduleIds: string[];
   source: string;
   verified: boolean;
-  notes: { text: string; at: string; by: string }[];
+  notes: { text: string; at: string; by: string; url?: string; title?: string; consensus?: string; questions?: string }[];
   links: ResourceLink[];
+  hiddenFields?: string[];
+  fieldLabels?: Record<string,string>;
+  sourceResourceId?: string;
+  flightNumber?: string;
+  endTime?: string;
+  destinationCity?: string;
+  travelMode?: string;
+  tentative?: boolean;
+  internalContact?: boolean;
+  projectEnabled?: boolean;
+  customFields?: { id: string; label: string; value: string }[];
+  contactGroup?: string;
+  overviewUrl?: string;
+  projectRank?: number;
   revision: number;
 };
-export const types = [
-  "投融资",
-  "政府客户",
-  "政企客户",
-  "企业品牌",
-  "政府领导",
-  "城市资源",
-  "教育院校",
-  "合作伙伴",
-];
+export const types = ["合作伙伴", "教育院校", "政府国企", "企业品牌", "投融资"];
+export const resourceType = (type:string) => (["政府客户","政企客户","政府领导"].includes(type) ? "政府国企" : type === "城市资源" ? "合作伙伴" : type);
+export const contactGroup = (r:RecordItem) => r.contactGroup || (r.internalContact ? "内部联系人" : "Genji");
+export const projectState = (r:RecordItem) => ["已关闭","已完成"].includes(r.status) ? "已关闭" : ["卡点","停滞"].includes(r.status) ? "卡点" : "正常";
 export const businesses = [
   "内容商单",
   "知识付费",
@@ -59,7 +67,7 @@ export const today = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-export const fresh = (kind: "resource" | "task" | "schedule"): RecordItem => ({
+export const fresh = (kind: "resource" | "task" | "schedule" | "project"): RecordItem => ({
   id: crypto.randomUUID(),
   kind,
   name: "",

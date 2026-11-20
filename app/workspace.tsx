@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { SignOutButton } from "@clerk/nextjs";
+import { WorkspaceHome } from "@/components/workspace-home";
+import { ResourceEditor, ResourceFacts } from "@/components/resource-editor";
+import { ProjectBoard } from "@/components/project-board";
 import {
   LayoutDashboard,
   Layers3,
@@ -78,14 +81,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { RecordItem, fresh, today, types, businesses } from "@/lib/model";
-import { seeds } from "@/lib/seeds";
 import { statutoryHolidays } from "@/lib/holidays";
+import {cityColor, cityForDate, categoryColor as categoryTint} from "@/lib/schedule-colors";
+import {contactGroup,resourceType,projectState} from "@/lib/model";
+import {localDrafts} from "@/lib/local-capture";
 const nav = [
   ["总览", LayoutDashboard],
-  ["资源库", Layers3],
   ["待办事项", ListTodo],
+  ["资源库", Layers3],
   ["Genji日程", Clock3],
-  ["自然语言录入", Sparkles],
+  ["项目跟进", Flag],
   ["设置与数据", Settings2],
 ] as const;
 function Select({
@@ -163,7 +168,12 @@ export default function Home() {
     [apiReady, setApiReady] = useState(false),
     [aiAnswer, setAiAnswer] = useState(""),
     [who, setWho] = useState("我");
-  const [scheduleMode, setScheduleMode] = useState("list");
+  const [calendarOpen, setCalendarOpen] = useState(true);
+  const [sideOpen, setSideOpen] = useState(false);
+  const [contactScope, setContactScope] = useState("全部联系人");
+  const [addedGroups,setAddedGroups]=useState<string[]>([]);
+  const [groupName,setGroupName]=useState<string|null>(null);
+  useEffect(()=>{try{const value=JSON.parse(localStorage.getItem("heipu-contact-groups")||"[]");if(Array.isArray(value))setAddedGroups(value.filter(v=>typeof v==="string"))}catch{}},[]);
   const [taskMode, setTaskMode] = useState("list");
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">("default");
   const day = today();
@@ -217,6 +227,7 @@ export default function Home() {
   const resources = items.filter((i) => i.kind === "resource"),
     tasks = items.filter((i) => i.kind === "task"),
     schedules = items.filter((i) => i.kind === "schedule");
+  const groups=[...new Set(["Genji",...addedGroups,...resources.map(contactGroup)])];
   useEffect(() => {
     if (notificationPermission !== "granted") return;
     const check = () => {
@@ -269,9 +280,10 @@ export default function Home() {
   const filtered = resources
     .filter(
       (r) =>
+        (contactScope === "全部联系人" || contactGroup(r) === contactScope) &&
         (!query ||
           JSON.stringify(r).toLowerCase().includes(query.toLowerCase())) &&
-        (type === "全部类型" || r.type === type) &&
+        (type === "全部类型" || resourceType(r.type) === type) &&
         (business === "全部业务" || r.business === business) &&
         (priority === "全部优先级" || r.priority === priority),
     )
@@ -290,6 +302,7 @@ export default function Home() {
       const saved = normalize(d.record);
       setItems((prev) => [saved, ...prev.filter((i) => i.id !== item.id)]);
       if (detail?.id === item.id) setDetail(saved);
+      if (item.kind === "resource" && item.projectEnabled) await refresh();
       if (close) setEdit(null);
       notify("已保存");
       return true;
@@ -368,16 +381,6 @@ export default function Home() {
       setLinkUrl("");
     }
   }
-  async function addHistory() {
-    setBusy(true);
-    let n = 0;
-    for (const s of seeds.filter((s) => !items.some((i) => i.id === s.id))) {
-      if (await save(s, false)) n++;
-      else break;
-    }
-    setBusy(false);
-    notify(`已导入 ${n} 条待核实资源`);
-  }
   function createTask(r?: RecordItem) {
     setEdit({
       ...fresh("task"),
@@ -393,6 +396,8 @@ export default function Home() {
     setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
   async function ai(mode = "extract") {
+    if(!apiReady && mode==="extract"){setDrafts(localDrafts(text,day));return}
+
     setBusy(true);
     setAiAnswer("");
     try {
@@ -485,7 +490,7 @@ export default function Home() {
         setText(content);
         notify("已读取文本，可交给AI Gateway整理");
       }
-      setView("自然语言录入");
+      setView("总览");
     } catch (e) {
       notify((e as Error).message);
     }
@@ -590,85 +595,15 @@ export default function Home() {
     );
   return (
     <SidebarProvider>
-      <Sidebar className="app-sidebar">
-        <SidebarHeader>
-          <div className="brand">
-            <div className="brandmark">◈</div>
-            <div>
-              <b>嘿噗</b>
-              <small>资源与日程工作台</small>
-            </div>
-          </div>
-          <div className="workspace-label">鲸海拾贝 · 私人工作空间</div>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
-            {nav.map(([label, Icon]) => (
-              <SidebarMenuItem key={label}>
-                <NavButton
-                  active={view === label}
-                  go={() => {
-                    setView(label);
-                    setQuery("");
-                  }}
-                >
-                  <Icon />
-                  <span>{label}</span>
-                  {label === "待办事项" && (
-                    <span className="nav-count">{activeTasks.length}</span>
-                  )}
-                </NavButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-          <div className="side-section">业务板块</div>
-          {businesses.map((b, i) => (
-            <button
-              key={b}
-              className="business-link"
-              onClick={() => {
-                setBusiness(b);
-                setView("资源库");
-              }}
-            >
-              <i
-                style={{
-                  background: [
-                    "#50a591",
-                    "#549ac2",
-                    "#7689b6",
-                    "#92ad76",
-                    "#66b5bd",
-                    "#b5ac7c",
-                    "#ab90b5",
-                  ][i],
-                }}
-              />
-              {b}
-            </button>
-          ))}
-        </SidebarContent>
-        <SidebarFooter>
-          <div className="side-foot">
-            <span>让每一次连接，都有后续。</span>
-            <small>嘿噗 / HEIPU</small>
-          </div>
-          <div className="profile">
-            <span>珈</span>
-            <div>
-              我的工作空间<small>资源与行动，持续积累</small>
-            </div>
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-      <main className="app-main">
+      <main className={`app-main studio-shell ${view === "总览" ? "is-home" : ""}`}>
         <header className="topbar">
           <div className="top-crumb">
-            <SidebarTrigger /> 工作空间 <span>/</span> <b>{view}</b>
+            <button className="studio-brand" onClick={()=>setView("总览")}><span>◈</span> 嘿噗 <small>HEIPU</small></button>
           </div>
+          <nav className="studio-nav">{nav.filter(([n])=>n!=="总览").map(([n])=><button key={n} className={view===n?"active":""} onClick={()=>{setView(n);setQuery("");}}>{n==="Genji日程"?"日程管理":n==="资源库"?"资源清单":n}</button>)}</nav>
           <div className="top-actions">
-            <span>{day.replaceAll("-", ".")}</span>
             <SignOutButton redirectUrl="/sign-in"><Button variant="ghost" size="sm">退出登录</Button></SignOutButton>
+            <span>{day.replaceAll("-", ".")}</span>
             <button
               aria-label="查看今日提醒"
               onClick={() => {
@@ -695,7 +630,7 @@ export default function Home() {
                   ? "把连接，变成下一步。"
                   : view === "资源详情" && detail
                     ? detail.name
-                    : view}
+                    : view === "Genji日程" ? "日程管理" : view === "资源库" ? "资源清单" : view}
               </h1>
               <p>
                 {view === "总览"
@@ -712,7 +647,7 @@ export default function Home() {
                             ? "看见老板与自己的安排。未完成事项按计划顺延，截止时间保持不变。"
                             : view === "自然语言录入"
                               ? "随手记下对话、资源和安排，核对后沉淀为档案。"
-                              : "管理数据备份、历史导入与 AI 连接。"}
+                              : view === "项目跟进" ? "把进展串成时间线，让资料与每一步同行。" : "管理数据备份、历史导入与 AI 连接。"}
               </p>
             </div>
             {view === "资源详情" ? (
@@ -728,15 +663,15 @@ export default function Home() {
             ) : (
               <Button
                 onClick={() =>
-                  view === "待办事项" || view === "日历"
+                  view === "项目跟进" ? setEdit(fresh("project")) : view === "待办事项" || view === "日历"
                     ? createTask()
                     : view === "Genji日程"
                       ? setEdit(fresh("schedule"))
-                      : setEdit(fresh("resource"))
+                      : setEdit({...fresh("resource"),contactGroup:contactScope==="全部联系人"?"Genji":contactScope})
                 }
               >
                 <Plus size={17} />{" "}
-                {view === "待办事项" || view === "日历"
+                {view === "项目跟进" ? "新建项目" : view === "待办事项" || view === "日历"
                   ? "新建待办"
                   : view === "Genji日程"
                     ? "新增日程"
@@ -760,187 +695,8 @@ export default function Home() {
           {loading && items.length === 0 && (
             <div className="notice">正在读取工作空间…</div>
           )}
-          {view === "总览" && (
-            <>
-              <div className="overview-top">
-                <div className="focus-card">
-                  <div className="focus-label">
-                    <span>今日聚焦</span>
-                    <span>
-                      {new Date().toLocaleDateString("zh-CN", {
-                        timeZone: "Asia/Shanghai",
-                        weekday: "long",
-                      })}
-                    </span>
-                  </div>
-                  <h2>
-                    {due.length
-                      ? `${due.length} 件事，值得今天推进。`
-                      : "留一点空间，给重要的事。"}
-                  </h2>
-                  <p>
-                    {due.length
-                      ? `老板 ${due.filter((t) => t.owner === "老板").length} 项 · 我的 ${due.filter((t) => t.owner !== "老板").length} 项`
-                      : "先记录一位伙伴，或安排今天的第一件事。"}
-                  </p>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setView("待办事项");
-                      setOwner("全部");
-                    }}
-                  >
-                    查看待办 <ArrowUpRight size={16} />
-                  </Button>
-                  <img className="island-art" src="/qingyu-island.png" alt="" />
-                </div>
-                <div className="stats">
-                  <button
-                    onClick={() => {
-                      setView("资源库");
-                      setType("全部类型");
-                      setBusiness("全部业务");
-                      setPriority("全部优先级");
-                    }}
-                  >
-                    <span>
-                      资源总数 <Layers3 size={17} />
-                    </span>
-                    <b>{resources.length.toString().padStart(2, "0")}</b>
-                    <small>
-                      {resources.filter((r) => !r.verified).length} 条待核实档案
-                    </small>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setView("资源库");
-                      setPriority("P0");
-                      setBusiness("全部业务");
-                    }}
-                  >
-                    <span>
-                      最高优先级 <Flag size={17} />
-                    </span>
-                    <b>
-                      {resources
-                        .filter((r) => r.priority === "P0")
-                        .length.toString()
-                        .padStart(2, "0")}
-                    </b>
-                    <small>优先推动关键连接</small>
-                  </button>
-                </div>
-              </div>
-              <div className="dashboard-grid">
-                <section className="panel">
-                  <div className="panel-head">
-                    <h2>
-                      今天的行动 <span>{due.length}</span>
-                    </h2>
-                    <button onClick={() => setView("待办事项")}>
-                      全部待办 <ArrowUpRight size={15} />
-                    </button>
-                  </div>
-                  <Tabs value={owner} onValueChange={setOwner}>
-                    <TabsList>
-                      {["全部", "老板", "我", "乔伊"].map((o) => (
-                        <TabsTrigger value={o} key={o}>
-                          {o === "我"
-                            ? "珈珈待办"
-                            : o === "老板"
-                              ? "Genji待办"
-                              : o}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
-                  {taskRows(
-                    due.filter((t) => owner === "全部" || t.owner === owner),
-                  )}
-                  <div className="panel-foot">
-                    <Clock3 size={15} />{" "}
-                    未完成的计划事项自动归入今天，硬截止日期保留
-                  </div>
-                </section>
-                <section className="panel">
-                  <div className="panel-head">
-                    <h2>资源分布</h2>
-                    <span className="muted">按业务板块</span>
-                  </div>
-                  <div className="distribution">
-                    {businesses.map((b, i) => {
-                      const n = resources.filter((r) =>
-                        r.business.split("、").includes(b),
-                      ).length;
-                      return (
-                        <button
-                          key={b}
-                          onClick={() => {
-                            setBusiness(b);
-                            setView("资源库");
-                          }}
-                        >
-                          <div>
-                            <span>{b}</span>
-                            <b>{n}</b>
-                          </div>
-                          <div className="bar">
-                            <i
-                              style={{
-                                width:
-                                  (resources.length
-                                    ? (n / resources.length) * 100
-                                    : 0) + "%",
-                                background: i % 2 ? "#73a5be" : "#66a99b",
-                              }}
-                            />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              </div>
-              <section className="panel resource-panel">
-                <div className="panel-head">
-                  <h2>值得关注的连接</h2>
-                  <button onClick={() => setView("资源库")}>
-                    进入资源库 <ArrowUpRight size={15} />
-                  </button>
-                </div>
-                {resources.length ? (
-                  <div className="resource-cards">
-                    {[...resources]
-                      .sort((a, b) => a.priority.localeCompare(b.priority))
-                      .slice(0, 4)
-                      .map((r) => (
-                        <button key={r.id} onClick={() => openResource(r)}>
-                          <div className="card-top">
-                            <span className="resource-icon">
-                              <Building2 size={19} />
-                            </span>
-                            <Priority p={r.priority} />
-                          </div>
-                          <h3>{r.name}</h3>
-                          <p>{r.contact || "对接人待补充"}</p>
-                          <div>
-                            <Badge variant="secondary">{r.type}</Badge>
-                            <small>{r.verified ? r.status : "待核实"}</small>
-                          </div>
-                        </button>
-                      ))}
-                  </div>
-                ) : (
-                  <div className="empty">
-                    <p>已有历史工作记录中的 10 条资源线索，可带出处导入。</p>
-                    <Button disabled={busy || !!err} onClick={addHistory}>
-                      导入历史资源线索
-                    </Button>
-                  </div>
-                )}
-              </section>
-            </>
-          )}
+          {view === "总览" && <WorkspaceHome items={items} due={due} day={day} go={setView}/>}
+          {view === "项目跟进" && <ProjectBoard items={items} save={save} edit={setEdit} remove={setDeleteItem}/>}
           {view === "资源库" && (
             <section className="panel">
               <div className="filters">
@@ -953,15 +709,17 @@ export default function Home() {
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </div>
+                <Select value={contactScope} onChange={value=>value==="＋ 新建联系人归属"?setGroupName(""):setContactScope(value)} options={["全部联系人", ...groups, "＋ 新建联系人归属"]}/>
+                <Dialog open={groupName!==null} onOpenChange={open=>{if(!open)setGroupName(null)}}><DialogContent><DialogTitle>新建联系人归属</DialogTitle><DialogDescription>用于归类和筛选资源对接关系。</DialogDescription><form onSubmit={e=>{e.preventDefault();const name=groupName?.trim();if(!name||["全部联系人","＋ 新建联系人归属"].includes(name))return;const next=[...new Set([...addedGroups,name])];setAddedGroups(next);try{localStorage.setItem("heipu-contact-groups",JSON.stringify(next))}catch{}setContactScope(name);setGroupName(null)}}><Input aria-label="联系人归属名称" required maxLength={100} value={groupName||""} onChange={e=>setGroupName(e.target.value)}/><Button type="submit">添加</Button></form></DialogContent></Dialog>
                 <Select
                   value={type}
                   onChange={setType}
-                  options={["全部类型", ...types]}
+                  options={["全部类型", ...new Set([...types,...resources.map(r=>resourceType(r.type)).filter(Boolean)])]}
                 />
                 <Select
                   value={business}
                   onChange={setBusiness}
-                  options={["全部业务", ...businesses]}
+                  options={["全部业务", ...new Set([...businesses,...resources.map(r=>r.business).filter(Boolean)])]}
                 />
                 <Select
                   value={priority}
@@ -979,9 +737,7 @@ export default function Home() {
                       "资源 / 公司",
                       "类型与业务",
                       "对接人",
-                      "来源渠道",
                       "优先级",
-                      "跟进状态",
                       "操作",
                     ].map((h) => (
                       <TableHead key={h}>{h}</TableHead>
@@ -994,26 +750,23 @@ export default function Home() {
                       <TableCell>
                         <button
                           className="resource-name"
-                          onClick={() => openResource(r)}
+                          title="点击编辑资源档案" onClick={() => setEdit(normalize(r))}
                         >
                           {r.name}
-                          <small>{r.city || "城市待补充"}</small>
+                          {r.customFields?.slice(0,2).map(f=><small key={f.id}>{f.label}：{f.value||"未填写"}</small>)}
+                          <small>{!r.hiddenFields?.includes("city")&&(r.city || "城市待补充")} · {contactGroup(r)}</small>
                         </button>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{r.type}</Badge>
+                        <Badge variant="secondary">{resourceType(r.type)}</Badge>
                         <small>{r.business}</small>
                       </TableCell>
-                      <TableCell>{r.contact || "待补充"}</TableCell>
-                      <TableCell>{r.channel || "待补充"}</TableCell>
+                      <TableCell>{r.hiddenFields?.includes("contact")?"—":r.contact || "待补充"}</TableCell>
+
                       <TableCell>
                         <Priority p={r.priority} />
                       </TableCell>
-                      <TableCell>
-                        <span className={!r.verified ? "unverified" : ""}>
-                          {r.verified ? r.status : "待核实"}
-                        </span>
-                      </TableCell>
+
                       <TableCell>
                         <div className="row-actions">
                           <button
@@ -1079,32 +832,8 @@ export default function Home() {
                     </Button>
                   </div>
                 </div>
-                <div className="detail-facts">
-                  <div>
-                    <span>对接人</span>
-                    <b>{detail.contact || "待补充"}</b>
-                  </div>
-                  <div>
-                    <span>城市</span>
-                    <b>{detail.city || "待补充"}</b>
-                  </div>
-                  <div>
-                    <span>来源渠道</span>
-                    <b>{detail.channel || "待补充"}</b>
-                  </div>
-                  <div>
-                    <span>负责人</span>
-                    <b>{detail.owner || "待补充"}</b>
-                  </div>
-                </div>
-                <div className="detail-block">
-                  <h2>最初的合作点与契机</h2>
-                  <p className="prewrap">{detail.opportunity || "待补充"}</p>
-                </div>
-                <div className="detail-block">
-                  <h2>记录来源</h2>
-                  <p>{detail.source || "待补充"}</p>
-                </div>
+                <ResourceFacts item={detail}/>
+                {detail.projectEnabled && <Button variant="outline" onClick={()=>setView("项目跟进")}>查看流转项目 →</Button>}
               </section>
               <div className="detail-columns">
                 <section className="panel">
@@ -1308,7 +1037,7 @@ export default function Home() {
                       <button className="linked-schedule-item" key={s.id} onClick={() => setEdit(s)}>
                         <span className="linked-schedule-time">{s.planned || "未安排日期"} · {s.time || "未定时间"}</span>
                         <strong>{s.name}</strong>
-                        <small>{s.category} · {s.city || "地点待补充"}</small>
+                        <small>{s.category} · {[s.destinationCity,s.city].filter(Boolean).join(" · ") || "地点待补充"}</small>
                       </button>
                     ))}
                   {!schedules.some((s) => s.resourceId === detail.id || s.resourceIds?.includes(detail.id)) && (
@@ -1320,13 +1049,9 @@ export default function Home() {
           )}
           {view === "Genji日程" && (
             <section className="panel">
+              <div className="schedule-legend">{["线上会议","线下会议","直播演讲","拍摄录制","差旅行程","其他活动"].map(c=><span key={c}><i style={{background:categoryTint(c)}}/>{c}</span>)}<span className="tentative-legend">◌ 待定</span></div>
               <div className="filters">
-                <Tabs value={scheduleMode} onValueChange={setScheduleMode}>
-                  <TabsList>
-                    <TabsTrigger value="list">列表视图</TabsTrigger>
-                    <TabsTrigger value="calendar">日历视图</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+                <button className="calendar-toggle" aria-expanded={calendarOpen} onClick={()=>setCalendarOpen(!calendarOpen)}>{calendarOpen?"收起月历":"展开月历"}</button>
                 {notificationPermission !== "unsupported" && (
                   <Button
                     variant={notificationPermission === "granted" ? "secondary" : "outline"}
@@ -1337,72 +1062,12 @@ export default function Home() {
                   </Button>
                 )}
               </div>
-              {scheduleMode === "list" ? (
-                <div className="schedule-list">
-                  {scheduleGroups.map(([dateKey, group]) => {
-                    const visibleGroup = group
-                      .filter((s) => s.status !== "已完成")
-                      .sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
-                    if (!visibleGroup.length) return null;
-                    return (
-                    <section className="schedule-day-group" key={dateKey}>
-                      <div className="schedule-day-heading">
-                        <span>{dateKey === "未安排日期" ? dateKey : `${dateKey.slice(5)} · ${new Date(`${dateKey}T12:00:00`).toLocaleDateString("zh-CN", { weekday: "long" })}`}</span>
-                        <b>{visibleGroup.length} 项</b>
-                      </div>
-                      <div className="schedule-day-items">
-                        {visibleGroup.map((s) => (
-                          <article
-                            className="schedule-card"
-                            key={s.id}
-                            onClick={() => setEdit(s)}
-                          >
-                            <div className="schedule-time">
-                              <Checkbox
-                                aria-label={`完成 ${s.name}`}
-                                checked={s.status === "已完成"}
-                                disabled={busy}
-                                onClick={(e) => e.stopPropagation()}
-                                onCheckedChange={(c) => save({ ...s, status: c ? "已完成" : "待确认" }, false)}
-                              />
-                              {s.planned || "未安排日期"} · {s.time || "待补充具体时间"}
-                            </div>
-                            <h3>{s.name}</h3>
-                            <div className="schedule-meta">
-                              <span className={`schedule-kind schedule-kind-${s.category}`}>{s.category}</span>
-                              <span className="schedule-location">{s.city || "地点待补充"}</span>
-                            </div>
-                            {s.topic && (
-                              <p><b>议题/主题：</b>{s.topic}</p>
-                            )}
-                            {s.attendees && (
-                              <p><b>参会人员：</b>{s.attendees}</p>
-                            )}
-                            <div className="schedule-card-footer">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteItem(s);
-                                }}
-                              >
-                                <Trash2 size={15} /> 删除
-                              </Button>
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="calendar-layout">
+              {calendarOpen && (
+                <div className={"calendar-layout schedule-month "+(!sideOpen?"expanded":"")}>
                   <section className="panel">
                     <div className="panel-head">
                       <h2>{month.replace("-", " 年 ")} 月</h2>
-                      <div className="inline">
+                      <div className="inline calendar-tools"><button aria-controls="schedule-day-details" aria-expanded={sideOpen} onClick={()=>setSideOpen(open=>!open)}>{sideOpen?"收起侧边栏":"展开侧边栏"}</button>
                         <Button
                           variant="outline"
                           size="icon"
@@ -1463,24 +1128,28 @@ export default function Home() {
                                 (d === date ? "selected " : "") +
                                 (d === day ? "today" : "")
                               }
+                              style={cityForDate(schedules,d) && cityForDate(schedules,d)!=="厦门" ? {background:cityColor(cityForDate(schedules,d))}:undefined}
+                              title={cityForDate(schedules,d) || "未标记城市"}
                               key={d}
                               onClick={() => setDate(d)}
                             >
                               <b>{i + 1}</b>
+                              {cityForDate(schedules,d) && cityForDate(schedules,d)!=="厦门" && <small className="city-label">{cityForDate(schedules,d)}</small>}
                               {statutoryHolidays[d] && <small className="holiday-label">{statutoryHolidays[d]}</small>}
-                              {ss.slice(0, 3).map((s) => (
-                                <span key={s.id} className={`boss ${s.status === "已完成" ? "calendar-completed" : ""}`}>
-                                  {s.time ? s.time + " " : "待定 "}
+                              {ss.sort((a,b)=>(a.time||"99:99").localeCompare(b.time||"99:99")).slice(0, sideOpen ? 3 : undefined).map((s) => (
+                                <span style={{borderLeft: `3px solid ${categoryTint(s.category)}`, color: s.tentative ? "#a27799" : undefined}} key={s.id} className={`boss ${s.status === "已完成" ? "calendar-completed" : ""}`}>
+                                  {s.tentative ? "待定 · " : ""}{s.time ? s.time + (s.endTime?"–"+s.endTime:"") + " " : "未定时间 "}
                                   {s.name}
                                 </span>
                               ))}
+                              {sideOpen && ss.length>3 && <small>另有 {ss.length-3} 项</small>}
                             </button>
                           );
                         },
                       )}
                     </div>
                   </section>
-                  <section className="panel">
+                  <section className="panel" id="schedule-day-details">
                     <div className="panel-head">
                       <h2>{date.slice(5).replace("-", " 月 ")} 日</h2>
                       <Button
@@ -1497,7 +1166,7 @@ export default function Home() {
                       .sort((a, b) => a.time.localeCompare(b.time))
                       .map((s) => (
                         <article
-                          className="schedule-card"
+                          className={`schedule-card ${s.tentative ? "tentative-event" : ""}`} style={{borderLeft: `4px solid ${categoryTint(s.category)}`}}
                           key={s.id}
                           onClick={() => setEdit(s)}
                         >
@@ -1512,8 +1181,8 @@ export default function Home() {
                             {s.time || "未定时间"} · {s.name}
                           </div>
                           <div className="schedule-meta">
-                            <span className={`schedule-kind schedule-kind-${s.category}`}>{s.category}</span>
-                            <span className="schedule-location">{s.city || "地点待补充"}</span>
+                            <span style={{color:categoryTint(s.category)}} className={`schedule-kind schedule-kind-${s.category}`}>{s.category}</span>
+                            <span className="schedule-location">{[s.destinationCity,s.city].filter(Boolean).join(" · ") || "地点待补充"}</span>
                           </div>
                           {s.topic && (
                             <p>
@@ -1527,11 +1196,72 @@ export default function Home() {
                               {s.attendees}
                             </p>
                           )}
+                          <button className="side-delete" onClick={e=>{e.stopPropagation();setDeleteItem(s)}}><Trash2 size={14}/> 删除</button>
                         </article>
                       ))}
                   </section>
                 </div>
               )}
+                <div className="schedule-list">
+                  {scheduleGroups.map(([dateKey, group]) => {
+                    const visibleGroup = group
+                      .filter((s) => s.status !== "已完成")
+                      .sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
+                    if (!visibleGroup.length) return null;
+                    return (
+                    <section className="schedule-day-group" key={dateKey}>
+                      <div className="schedule-day-heading">
+                        <span>{dateKey === "未安排日期" ? dateKey : `${dateKey.slice(5)} · ${new Date(`${dateKey}T12:00:00`).toLocaleDateString("zh-CN", { weekday: "long" })}`}</span>
+                        <b>{visibleGroup.length} 项</b>
+                      </div>
+                      <div className="schedule-day-items">
+                        {visibleGroup.map((s) => (
+                          <article
+                            className={`schedule-card ${s.tentative ? "tentative-event" : ""}`} style={{borderLeft: `4px solid ${categoryTint(s.category)}`}}
+                            key={s.id}
+                            onClick={() => setEdit(s)}
+                          >
+                            <div className="schedule-time">
+                              <Checkbox
+                                aria-label={`完成 ${s.name}`}
+                                checked={s.status === "已完成"}
+                                disabled={busy}
+                                onClick={(e) => e.stopPropagation()}
+                                onCheckedChange={(c) => save({ ...s, status: c ? "已完成" : "待确认" }, false)}
+                              />
+                              {s.planned || "未安排日期"} · {s.time || "未定时间"}{s.endTime ? ` — ${s.endTime}` : ""}
+                            </div>
+                            <h3>{s.tentative && "待定 · "}{s.name}</h3>
+                            <div className="schedule-meta">
+                              <span style={{color:categoryTint(s.category)}} className={`schedule-kind schedule-kind-${s.category}`}>{s.category}</span>
+                              <span className="schedule-location">{[s.destinationCity,s.city].filter(Boolean).join(" · ") || "地点待补充"}</span>
+                            </div>
+                            {s.category === "差旅行程" && <p>{s.travelMode||"出行方式待补充"} · {s.flightNumber||"班次待补充"}</p>}
+                            {s.topic && (
+                              <p><b>议题/主题：</b>{s.topic}</p>
+                            )}
+                            {s.attendees && (
+                              <p><b>参会人员：</b>{s.attendees}</p>
+                            )}
+                            <div className="schedule-card-footer">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteItem(s);
+                                }}
+                              >
+                                <Trash2 size={15} /> 删除
+                              </Button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                    );
+                  })}
+                </div>
             </section>
           )}
           {view === "待办事项" && (
@@ -1732,21 +1462,21 @@ export default function Home() {
               </section>
             </div>
           )}
-          {view === "自然语言录入" && (
+          {view === "总览" && (
             <div className="ingest-grid">
               <section className="panel">
                 <div className="panel-head">
                   <h2>
-                    <Sparkles size={21} /> 随手记，认真跟进
+                    <Sparkles size={21} /> 自然语言录入
                   </h2>
                   <Badge variant="secondary">
-                    {apiReady ? "AI Gateway · 已配置" : "AI Gateway 待配置"}
+                    {apiReady ? "AI Gateway · 已配置" : "本地草稿模式"}
                   </Badge>
                 </div>
                 <Textarea
                   className="capture"
                   placeholder={
-                    "例如：今天朋友介绍了杭州的一家文旅公司，对接人王总，有意合作 AI 导览。优先级高，下周三我跟进方案。\n\n也可以粘贴会议记录、聊天摘要或历史笔记。"
+                    "例如：明天下午三点 Genji 与文旅团队开线上会议。\n待办：珈珈周五前准备合作方案。"
                   }
                   value={text}
                   onChange={(e) => setText(e.target.value)}
@@ -1761,19 +1491,18 @@ export default function Home() {
                     />
                   </label>
                   <Button
-                    disabled={busy || !text.trim() || !apiReady}
+                    disabled={busy || !text.trim()}
                     onClick={() => ai()}
                   >
-                    整理为资源与待办 <ArrowUpRight size={16} />
+                    整理成草稿 <ArrowUpRight size={16} />
                   </Button>
                 </div>
                 {!apiReady && (
                   <p className="helper">
-                    AI Gateway接入需要服务端 API Key。你仍可手动录入，或导入 JSON
-                    记录进行核对。
+                    每行一件事，可用“日程：”“待办：”“资源：”或“项目：”开头。核对草稿后保存。
                   </p>
                 )}
-                <div className="ask-row">
+                <div className="ask-row" hidden={!apiReady}>
                   <Button
                     variant="outline"
                     disabled={!apiReady || busy || !text.trim()}
@@ -1784,7 +1513,7 @@ export default function Home() {
                 </div>
                 {aiAnswer && <div className="answer">{aiAnswer}</div>}
               </section>
-              <section className="panel">
+              <section className="panel" hidden={!drafts.length}>
                 <div className="panel-head">
                   <h2>
                     待核对 <span>{drafts.length}</span>
@@ -1794,7 +1523,7 @@ export default function Home() {
                   drafts.map((d, i) => (
                     <div className="draft" key={d.id}>
                       <Badge variant="secondary">
-                        {d.kind === "resource" ? "资源" : "待办"}
+                        {{resource:"资源",task:"待办",schedule:"日程",project:"项目"}[d.kind]}
                       </Badge>
                       <h3>{d.name}</h3>
                       <p>{d.opportunity || d.business}</p>
@@ -1839,11 +1568,9 @@ export default function Home() {
               <section className="panel setting">
                 <h2>历史与备份</h2>
                 <p>
-                  历史记录保留原始出处和待核实标记。备份包含资源、待办及全部跟进记录。
+                  备份包含当前空间的资源、待办、日程、项目和跟进记录。
                 </p>
-                <Button disabled={busy || !!err} onClick={addHistory}>
-                  导入历史资源（去重）
-                </Button>
+
                 <Button
                   variant="outline"
                   disabled={loading || !!err}
@@ -1870,7 +1597,7 @@ export default function Home() {
                   根据关键词检索相关档案，结合当前输入整理，不依赖一段越来越长的聊天。
                 </p>
                 <p className="helper">
-                  模型调用通过 AI Gateway，由服务端完成认证。实际可用性以请求结果为准；密钥不会写入网页或备份。
+                  模型调用通过 AI Gateway，由服务端完成认证。密钥不会写入网页或备份。
                 </p>
               </section>
               <section className="panel setting">
@@ -1930,7 +1657,7 @@ export default function Home() {
               ? "资源档案"
               : edit?.kind === "schedule"
                 ? "Genji日程"
-                : "待办事项"}
+                : edit?.kind === "project" ? "项目" : "待办事项"}
           </DialogTitle>
           <DialogDescription>
             保存合作脉络、明确下一步。带 * 的字段必填。
@@ -1944,13 +1671,12 @@ export default function Home() {
                 });
               }}
             >
+              {edit.kind === "resource" ? <ResourceEditor item={edit} onChange={setEdit} groups={groups}/> : <>
               <div className="form-grid">
                 <label className="wide">
-                  {edit.kind === "resource"
-                    ? "资源 / 公司名称"
-                    : edit.kind === "schedule"
+                  {edit.kind === "schedule"
                       ? "日程名称"
-                      : "待办内容"}{" "}
+                      : edit.kind === "project" ? "项目名称" : "待办内容"}{" "}
                   *
                   <Input
                     required
@@ -1959,61 +1685,24 @@ export default function Home() {
                     onChange={(e) => setEdit({ ...edit, name: e.target.value })}
                   />
                 </label>
-                {edit.kind === "resource" && (
-                  <>
-                    <label>
-                      资源类型
-                      <Select
-                        value={edit.type}
-                        onChange={(v) => setEdit({ ...edit, type: v })}
-                        options={types}
-                      />
-                    </label>
-                    <label>
-                      对接人
-                      <Input
-                        value={edit.contact}
-                        onChange={(e) =>
-                          setEdit({ ...edit, contact: e.target.value })
-                        }
-                      />
-                    </label>
-                    <label>
-                      城市
-                      <Input
-                        value={edit.city}
-                        onChange={(e) =>
-                          setEdit({ ...edit, city: e.target.value })
-                        }
-                      />
-                    </label>
-                    <label>
-                      来源渠道
-                      <Input
-                        value={edit.channel}
-                        onChange={(e) =>
-                          setEdit({ ...edit, channel: e.target.value })
-                        }
-                      />
-                    </label>
-                  </>
-                )}
+                {edit.kind === "schedule" && <label className="wide"><input type="checkbox" checked={!!edit.tentative} onChange={e=>setEdit({...edit,tentative:e.target.checked})}/> 待定</label>}
+                {edit.kind === "project" && <label className="wide">项目总览表链接<Input type="url" pattern="https?://.+" value={edit.overviewUrl||""} onChange={e=>setEdit({...edit,overviewUrl:e.target.value})}/></label>}
                 <label>
                   主要业务板块
                   <Select
                     value={edit.business}
                     onChange={(v) => setEdit({ ...edit, business: v })}
-                    options={businesses}
+                    options={edit.kind==="schedule"||edit.kind==="task"?[...businesses,"企业合作"]:businesses}
                   />
                 </label>
-                <label>
+                {edit.kind!=="schedule" && <label>
                   优先级
                   <Select
                     value={edit.priority}
                     onChange={(v) => setEdit({ ...edit, priority: v })}
                     options={["P0", "P1", "P2", "P3"]}
                   />
-                </label>
+                </label>}
                 <label>
                   负责人
                   <Select
@@ -2025,24 +1714,18 @@ export default function Home() {
                 <label>
                   状态
                   <Select
-                    value={edit.status}
+                    value={edit.kind==="project"?projectState(edit):edit.status}
                     onChange={(v) => setEdit({ ...edit, status: v })}
                     options={
-                      edit.kind === "resource"
-                        ? [
-                            "待核实",
-                            "待联系",
-                            "已接洽",
-                            "推进中",
-                            "已合作",
-                            "暂缓",
-                          ]
-                        : edit.kind === "schedule"
+                      edit.kind === "schedule"
                           ? ["待确认", "已确认", "已完成", "已取消"]
-                          : ["待处理", "进行中", "等待反馈", "已完成"]
+                          : edit.kind==="project" ? ["正常","卡点","已关闭"] : ["待处理", "进行中", "等待反馈", "已完成"]
                     }
                   />
                 </label>
+                {edit.kind === "schedule" && <><label>所在城市 / 行程目的地<Input placeholder="如北京；返程填写厦门" value={edit.destinationCity||""} onChange={e=>setEdit({...edit,destinationCity:e.target.value})}/></label>{edit.category === "差旅行程" && <label>出行方式<Select value={edit.travelMode||"飞机"} options={["飞机","高铁","汽车"]} onChange={v=>setEdit({...edit,travelMode:v})}/></label>}<p className="wide field-hint">差旅行程从出发日期起标记目的城市，直到下一段旅程；返回厦门后恢复普通底色。待定行程不改变城市。</p></>}
+                {edit.kind === "project" && <label className="wide">项目起始日期<Input type="date" value={edit.planned} onChange={e=>setEdit({...edit,planned:e.target.value})}/></label>}
+
                 {(edit.kind === "task" || edit.kind === "schedule") && (
                   <>
                     <label>
@@ -2054,7 +1737,7 @@ export default function Home() {
                         }
                       >
                         {(edit.kind === "schedule"
-                          ? ["线上会议", "线下会议", "直播演讲", "差旅行程", "其他活动"]
+                          ? ["线上会议", "线下会议", "直播演讲", "拍摄录制", "差旅行程", "其他活动"]
                           : edit.owner === "老板"
                             ? ["会议", "电话会", "其他事项"]
                             : ["工作推进", "沟通联系", "行政事项", "其他事项"]
@@ -2087,6 +1770,7 @@ export default function Home() {
                         }
                       />
                     </label>
+                    {edit.kind === "schedule" && <><label>结束时间（可留空）<Input type="time" value={edit.endTime||""} onChange={e=>setEdit({...edit,endTime:e.target.value})}/><button type="button" className="clear-date" onClick={()=>setEdit({...edit,endTime:""})}>清除</button></label>{edit.category === "差旅行程" && <label>航班 / 车次号<Input value={edit.flightNumber||""} onChange={e=>setEdit({...edit,flightNumber:e.target.value})} placeholder="如 MF8101 / G1655"/></label>}</>}
                     <label>
                       计划处理日期
                       <Input
@@ -2097,8 +1781,8 @@ export default function Home() {
                         }
                       />
                     </label>
-                    <label>
-                      硬截止日期（可留空）
+                    {edit.kind==="task" && <label>
+                      <span>硬截止日期（可留空） <button type="button" onClick={() => setEdit({...edit,deadline:""})}>清除日期</button></span>
                       <Input
                         type="date"
                         value={edit.deadline}
@@ -2106,7 +1790,7 @@ export default function Home() {
                           setEdit({ ...edit, deadline: e.target.value })
                         }
                       />
-                    </label>
+                    </label>}
                     <label className="wide">
                       关联资源（可多选）
                       <div className="association-options">
@@ -2164,7 +1848,7 @@ export default function Home() {
                   </>
                 )}
                 <label className="wide">
-                  {edit.kind === "resource" ? "最初的合作点与契机" : "事项说明"}
+                  {edit.kind === "project" ? "项目目标与说明" : "事项说明"}
                   <Textarea
                     value={edit.opportunity}
                     onChange={(e) =>
@@ -2189,6 +1873,7 @@ export default function Home() {
                   信息已核实
                 </label>
               </div>
+              </>}
               <div className="dialog-actions">
                 <Button
                   type="button"
