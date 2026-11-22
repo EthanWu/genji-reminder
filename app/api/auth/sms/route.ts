@@ -6,6 +6,8 @@ import { sameOrigin } from '@/lib/access';
 import { allowedPhone, otpHash, smsConfig, smsCookieOptions, SMS_COOKIE, SMS_SESSION_SECONDS, tokenHash } from '@/lib/sms-auth';
 import { sendSms } from '@/lib/volc-sms';
 
+export const maxDuration = 45;
+
 const requestSchema = z.discriminatedUnion('action', [
   z.object({action:z.literal('send'),phone:z.string().regex(/^1[3-9]\d{9}$/)}),
   z.object({action:z.literal('verify'),challenge:z.string().regex(/^[a-f0-9]{64}$/),code:z.string().regex(/^\d{6}$/)}),

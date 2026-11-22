@@ -40,7 +40,7 @@ export function buildSmsRequest(phone: string, code: string, accessKey: string, 
 
 export async function sendSms(phone: string, code: string, accessKey: string, secret: string) {
   const {url, init} = buildSmsRequest(phone, code, accessKey, secret);
-  const res = await fetch(url, {...init, redirect: 'error', signal: AbortSignal.timeout(8000)});
+  const res = await fetch(url, {...init, redirect: 'error', signal: AbortSignal.timeout(30_000)});
   const data = await res.json() as {
     ResponseMetadata?: {RequestId?: string; Error?: {Code?: string}};
     Result?: {MessageID?: string[]};
