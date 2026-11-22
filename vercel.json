@@ -1,1 +1,15 @@
-{"framework":"nextjs","buildCommand":"npm run build","installCommand":"npm ci","regions":["hnd1"]}
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "regions": [
+    "hnd1"
+  ],
+  "functions": {
+    "app/api/auth/sms/route.ts": {
+      "regions": [
+        "hkg1"
+      ]
+    }
+  }
+}
