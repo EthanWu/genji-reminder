@@ -4,7 +4,7 @@ export async function probeSmsGateway() {
   for (let sample = 0; sample < 4; sample++) {
     const started = performance.now();
     try {
-      const response = await fetch('https://sms.volcengineapi.com/', {
+      const response = await fetch('https://sms.ap-hongkong.tencentcloudapi.com/', {
         method:'HEAD', cache:'no-store', redirect:'manual',
         headers:{Connection:'close'}, signal:AbortSignal.timeout(10_000),
       });
