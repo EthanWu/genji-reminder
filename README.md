@@ -44,6 +44,12 @@ GitHub Actions 的 `.github/workflows/ci.yml` 在 `main` 推送和面向 `main` 
 
 CI 与 Vercel 构建并行运行，目前 CI 检查不是生产发布的阻断条件。
 
+## 手机号登录
+
+手机号登录使用火山引擎国内短信。生产环境配置 `VOLC_SMS_ACCESS_KEY_ID`、`VOLC_SMS_SECRET_ACCESS_KEY`、`SMS_OTP_SECRET`（独立随机密钥，至少 32 字符）和 `ALLOWED_SMS_PHONES`（逗号分隔的大陆 11 位号码）。所有配置都只在服务端使用。启用前使用目标环境的数据库连接运行 `node --env-file=.env.production.local scripts/migrate-sms.mjs`。迁移只创建短信登录用表。
+
+验证码 5 分钟有效，每个号码发送间隔 60 秒、24 小时内最多发送 10 次，每个验证码最多验证 5 次。
+
 ## 边界
 
 V3 支持独立项目跟进和扩展日程字段。新数据库从空白开始，升级继续读取现有 Neon 记录，无需改表。

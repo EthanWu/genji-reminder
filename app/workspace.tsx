@@ -141,7 +141,7 @@ function Priority({ p }: { p: string }) {
     </Badge>
   );
 }
-export default function Home() {
+export default function Home({viaSms = false}: {viaSms?: boolean}) {
   const [view, setView] = useState("总览"),
     [items, setItems] = useState<RecordItem[]>([]),
     [loading, setLoading] = useState(true),
@@ -602,7 +602,13 @@ export default function Home() {
           </div>
           <nav className="studio-nav">{nav.filter(([n])=>n!=="总览").map(([n])=><button key={n} className={view===n?"active":""} onClick={()=>{setView(n);setQuery("");}}>{n==="Genji日程"?"日程管理":n==="资源库"?"资源清单":n}</button>)}</nav>
           <div className="top-actions">
-            <SignOutButton redirectUrl="/sign-in"><Button variant="ghost" size="sm">退出登录</Button></SignOutButton>
+            {viaSms ? (
+              <form action="/api/auth/sms/logout" method="post">
+                <Button type="submit" variant="ghost" size="sm">退出登录</Button>
+              </form>
+            ) : (
+              <SignOutButton redirectUrl="/sign-in"><Button variant="ghost" size="sm">退出登录</Button></SignOutButton>
+            )}
             <span>{day.replaceAll("-", ".")}</span>
             <button
               aria-label="查看今日提醒"
