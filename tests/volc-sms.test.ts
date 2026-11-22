@@ -17,8 +17,25 @@ test('signs the reviewed Volcengine template request with the exact JSON body', 
 });
 
 test('treats HTTP 200 with a provider error as a failed submission', async t => {
+  const log = t.mock.method(console, 'error', () => {});
   t.mock.method(globalThis, 'fetch', async () => Response.json({
-    ResponseMetadata: {Error: {Code: 'TEST_REJECTED'}},
+    ResponseMetadata: {RequestId: 'test-request', Error: {Code: 'TEST_REJECTED'}},
   }));
   await assert.rejects(sendSms('13800138000', '012345', 'fake', 'fake'), /rejected/);
+  const diagnostic = JSON.parse(log.mock.calls[0].arguments[1]);
+  assert.equal(diagnostic.httpStatus, 200);
+  assert.equal(diagnostic.businessCode, 'TEST_REJECTED');
+  assert.equal(diagnostic.requestId, 'test-request');
+});
+
+test('records transport errors even when there is no provider response', async t => {
+  const log = t.mock.method(console, 'error', () => {});
+  t.mock.method(globalThis, 'fetch', async () => {
+    throw new TypeError('fetch failed', {cause:{code:'UND_ERR_CONNECT_TIMEOUT'}});
+  });
+  await assert.rejects(sendSms('13800138000', '012345', 'fake', 'fake'), /fetch failed/);
+  const diagnostic = JSON.parse(log.mock.calls[0].arguments[1]);
+  assert.equal(diagnostic.phase, 'connect');
+  assert.equal(diagnostic.httpStatus, null);
+  assert.equal(diagnostic.networkCode, 'UND_ERR_CONNECT_TIMEOUT');
 });

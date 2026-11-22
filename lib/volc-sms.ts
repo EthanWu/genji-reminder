@@ -38,15 +38,43 @@ export function buildSmsRequest(phone: string, code: string, accessKey: string, 
   };
 }
 
+function diagnosticValue(value: unknown) {
+  return typeof value === 'string' && /^[A-Za-z0-9_.:-]{1,120}$/.test(value) ? value : null;
+}
+
 export async function sendSms(phone: string, code: string, accessKey: string, secret: string) {
+  const started = Date.now();
   const {url, init} = buildSmsRequest(phone, code, accessKey, secret);
-  const res = await fetch(url, {...init, redirect: 'error', signal: AbortSignal.timeout(30_000)});
-  const data = await res.json() as {
+  const signal = AbortSignal.timeout(30_000);
+  let response: Response | undefined;
+  let data: {
     ResponseMetadata?: {RequestId?: string; Error?: {Code?: string}};
     Result?: {MessageID?: string[]};
-  };
-  if (!res.ok || data.ResponseMetadata?.Error || !data.Result?.MessageID?.[0]) {
-    console.warn('Volcengine SMS rejected', res.status, data.ResponseMetadata?.Error?.Code, data.ResponseMetadata?.RequestId);
-    throw new Error('SMS delivery request rejected');
+  } | null = null;
+  let phase = 'connect';
+  try {
+    response = await fetch(url, {...init, redirect: 'error', signal});
+    phase = 'parse';
+    data = await response.json();
+    phase = 'provider';
+    if (!response.ok || data?.ResponseMetadata?.Error || !data?.Result?.MessageID?.[0]) {
+      throw new Error('SMS delivery request rejected');
+    }
+  } catch (error) {
+    const cause = error instanceof Error ? error.cause : undefined;
+    const networkCode = cause && typeof cause === 'object' && 'code' in cause ? cause.code : undefined;
+    console.error('Volcengine SMS failed', JSON.stringify({
+      phase,
+      elapsedMs: Date.now() - started,
+      timedOut: signal.aborted,
+      httpStatus: response?.status ?? null,
+      businessCode: diagnosticValue(data?.ResponseMetadata?.Error?.Code),
+      requestId: diagnosticValue(data?.ResponseMetadata?.RequestId)
+        ?? diagnosticValue(response?.headers.get('x-request-id'))
+        ?? diagnosticValue(response?.headers.get('x-tt-logid')),
+      errorType: diagnosticValue(error instanceof Error ? error.name : undefined),
+      networkCode: diagnosticValue(networkCode),
+    }));
+    throw error;
   }
 }
