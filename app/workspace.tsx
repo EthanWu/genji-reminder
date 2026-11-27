@@ -602,6 +602,7 @@ export default function Home({viaSms = false}: {viaSms?: boolean}) {
           </div>
           <nav className="studio-nav">{nav.filter(([n])=>n!=="总览").map(([n])=><button key={n} className={view===n?"active":""} onClick={()=>{setView(n);setQuery("");}}>{n==="Genji日程"?"日程管理":n==="资源库"?"资源清单":n}</button>)}</nav>
           <div className="top-actions">
+            {!viaSms && <Button asChild variant="ghost" size="sm"><a href="/account/password">设置密码</a></Button>}
             {viaSms ? (
               <form action="/api/auth/sms/logout" method="post">
                 <Button type="submit" variant="ghost" size="sm">退出登录</Button>
