@@ -87,11 +87,13 @@ export default function EmailLogin({allowedEmail}: {allowedEmail: string}) {
     }
   }
 
-  async function switchMode() {
+  async function switchMode(nextMode: typeof mode) {
+    if (nextMode === mode) return;
     setBusy(true);
     try {
-      await signIn.reset();
-      setMode(mode==='code'?'password':'code');
+      const result = await signIn.reset();
+      if (result.error) {setError('暂时无法切换登录方式，请刷新后重试。');return;}
+      setMode(nextMode);
       setSent(false);
       setDeviceCheck(false);
       setCode('');
@@ -106,6 +108,14 @@ export default function EmailLogin({allowedEmail}: {allowedEmail: string}) {
 
   if (isSignedIn) return <div className="w-full max-w-sm space-y-4 rounded-lg border bg-white p-6"><p>你已登录。</p><Button asChild><a href="/">进入工作台</a></Button><SignOutButton redirectUrl="/sign-in"><Button variant="outline">退出登录</Button></SignOutButton></div>;
   return <section className="w-full max-w-sm rounded-lg border bg-white p-6">
+    <div role="group" aria-label="登录方式" className="mb-4 grid grid-cols-2 gap-2">
+      <Button type="button" variant={mode==='code'?'default':'outline'} aria-pressed={mode==='code'} disabled={pending} onClick={()=>void switchMode('code')}>
+        邮箱验证码登录
+      </Button>
+      <Button type="button" variant={mode==='password'?'default':'outline'} aria-pressed={mode==='password'} disabled={pending} onClick={()=>void switchMode('password')}>
+        邮箱密码登录
+      </Button>
+    </div>
     <form className="space-y-4" onSubmit={e=>{e.preventDefault();void(mode==='password'?passwordLogin():sent?verify():send());}}>
       <div className="space-y-2"><label htmlFor="email" className="text-sm font-medium">邮箱</label><Input id="email" type="email" autoComplete="email" required value={email} disabled={sent || deviceCheck || pending} onChange={e=>setEmail(e.target.value)} placeholder="输入授权邮箱" /></div>
       {mode==='password' && !deviceCheck && <label className="block space-y-1 text-sm">
@@ -116,8 +126,5 @@ export default function EmailLogin({allowedEmail}: {allowedEmail: string}) {
       <Button className="w-full" type="submit" disabled={pending}>{pending?'处理中…':(sent || deviceCheck)?'验证并登录':mode==='password'?'使用密码登录':'发送验证码'}</Button>
       {sent && <div className="flex justify-between"><Button type="button" variant="ghost" disabled={pending || cooldown>0} onClick={()=>void send()}>{cooldown>0?`${cooldown} 秒后重新发送`:'重新发送'}</Button><Button type="button" variant="ghost" disabled={pending} onClick={()=>{signIn.reset();setSent(false);setCode('');setError('');}}>更换邮箱</Button></div>}
     </form>
-    <Button type="button" variant="link" className="mt-2 px-0" disabled={pending} onClick={()=>void switchMode()}>
-      {mode==='code'?'改用邮箱密码登录':'改用邮箱验证码登录'}
-    </Button>
   </section>;
 }
